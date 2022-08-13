@@ -1,0 +1,161 @@
+<html>
+<head>
+    <script src="/static/jquery-3.6.0.min.js"></script>
+    <style>
+
+    body{
+        font-family: Helvetica;
+        font-size: 50px;
+    }
+
+    select {
+        appearance: none;
+        color: lightblue;
+        background-color: white;
+        border: none;
+        outline: none;
+        padding: 0 0em 0 0;
+        margin: 0;
+        font-family: inherit;
+        font-size: inherit;
+        cursor: inherit;
+        line-height: inherit;
+}
+
+
+    a 
+    {
+        text-decoration: none;
+    }
+
+    a:hover { filter: brightness(150%); }
+    a:active { filter: brightness(150%); }
+
+    .play {  color: rgb(0,150,0); }
+    .stop {  color: rgb(150,0,0); }
+    .sleep { color: rgb(210,150,0); }
+
+    /* The slider itself */
+    .slider {
+        -webkit-appearance: none;  /* Override default CSS styles */
+        appearance: none;
+        width: 100%; /* Full-width */#th
+        height: 25px; /* Specified height */
+        background: #EFEFEF; /* Grey background */
+        color: #222;
+        outline: none; /* Remove outline */
+        opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+        -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+        transition: opacity .2s;
+    }
+
+    .hold
+    {
+        color: white;
+        display: none;
+    }
+    
+
+    </style>
+</head>
+<body>
+    On <select id="zone"></select><br>
+    <div id='thingdoer'><a id="go" class="play">play</a> <select id="station"></select> or <br>
+    <a id="stop" class="stop">stop</a> or <br>
+    <a id="sleep" class="sleep">sleep</a> in
+    <select id="sleeps">
+        <option value='15'>15</option>
+        <option value='30'>30</option>
+        <option value='45'>45</option>
+        <option value='60'>60</option>
+    </select>
+    minutes
+
+    </div>
+
+    <div class="slidecontainer">
+        <input type="range" min="0" max="100" value="50" class="slider" id="volume">
+    </div>
+
+    <span id="holdz" class="hold"></span>
+    <span id="holds" class="hold"></span>
+    
+    <script>
+
+    things = {'zone':{},'station':{}};
+
+    $.each(things,(key,val)=>{$.get(`/get_${key}`, (data) =>{things[key] = data;build_lists();})})
+
+    function build_lists()
+    {
+        $.each(things,(key,val)=>
+        {
+            $(`#${key}`).empty()        
+            $.each(things[key],(kk,vv)=>{$(`#${key}`).append(`<option value="${kk}">${kk}</option>`)})
+        }
+        )
+
+        get_volume();
+        fit();
+    }
+
+    $("#go").click((e)=>{
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        console.log(out);
+        $.post("/play_station",out,(data)=>{console.log(data)})
+    })
+
+
+    $("#stop").click((e)=>{
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        console.log(out);
+        $.post("/stop",out,(data)=>{console.log(data)})
+    })
+
+    $("#sleep").click((e)=>{
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out['sleep'] = $("#sleeps").val()
+        console.log(out);
+        $.post("/sleep",out,(data)=>{console.log(data)})
+    })
+
+    $("#volume").on('change',(e)=>{
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out['volume'] = $("#volume").val()
+        console.log(out);
+        $.post("/set_volume",out,(data)=>{console.log(data)})
+
+        })
+
+    $("select").on('change',()=>{fit()});
+    
+    function get_volume()
+    {
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out['volume'] = $("#volume").val()
+        console.log(out);
+        $.post("/get_volume",out,(data)=>{
+            console.log(data);
+            $("#volume").val(data['volume']);
+        })
+    }
+
+
+    function fit()
+    {
+        $("#holds").html($("#station").val())
+        $("#holdz").html($("#zone").val())
+        $("#station").width($("#holds").width())
+        $("#zone").width($("#holdz").width())
+    }
+
+    $("#zone").on('change',()=>{get_volume()})
+
+    </script>
+</body>
+</html>
