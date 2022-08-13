@@ -2,7 +2,7 @@
 
 I [whined](https://twitter.com/steingart/status/1555191526229266438) about the jingles and ads that TuneIn inserts into Sonos radio streams, and the seeming inability to pay for them to go away. I then realized that the excellent SoCo library provided an easy workaround to the vibe-killing. 
 
-So as one should, when I whined, I took action, and here's the result. Run this on a network where you've got a sonos, use my [station list]() or make your own and edit that one line in `not_tunein.py` appropriately, and you're off.
+So as one should, when I whined, I took action, and here's the result. Run this on a network where you've got a sonos, use my [station list](https://docs.google.com/spreadsheets/d/1eCQ94Ur71X0C5-EoPVfuTXJH6f3zYkt1pFmO2872eVs/edit#gid=0) or make your own and edit that one line in `not_tunein.py` appropriately, and you're off.
 
 ![not_tunein](not_tunein.gif)
 
