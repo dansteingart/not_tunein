@@ -5,8 +5,12 @@
 
     body{
         font-family: Helvetica;
-        font-size: 50px;
+        font-size: 100px;
+          -webkit-touch-callout:none;
+
     }
+
+    div{          -webkit-touch-callout:none;}
 
     select {
         appearance: none;
@@ -40,7 +44,7 @@
         -webkit-appearance: none;  /* Override default CSS styles */
         appearance: none;
         width: 100%; /* Full-width */#th
-        height: 25px; /* Specified height */
+        height: 10px; /* Specified height */
         background: #EFEFEF; /* Grey background */
         color: #222;
         outline: none; /* Remove outline */
@@ -72,7 +76,9 @@
     minutes
 
     </div>
-
+    <br>
+    <a id="vup">V↑</a>              <a id="vdown">V↓</a>
+    <br><br>
     <div class="slidecontainer">
         <input type="range" min="0" max="100" value="50" class="slider" id="volume">
     </div>
@@ -122,14 +128,7 @@
         $.post("/sleep",out,(data)=>{console.log(data)})
     })
 
-    $("#volume").on('change',(e)=>{
-        out = {}
-        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
-        out['volume'] = $("#volume").val()
-        console.log(out);
-        $.post("/set_volume",out,(data)=>{console.log(data)})
-
-        })
+    $("#volume").on('change',(e)=>{set_volume($("#volume").val())})
 
     $("select").on('change',()=>{fit()});
     
@@ -145,6 +144,14 @@
         })
     }
 
+    function set_volume(vol)
+    {
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()});
+        out['volume'] = vol;
+        console.log(out);
+        $.post("/set_volume",out,(data)=>{console.log(data); get_volume();})
+    }
 
     function fit()
     {
@@ -155,6 +162,11 @@
     }
 
     $("#zone").on('change',()=>{get_volume()})
+
+
+    $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
+    $("#vdown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
+
 
     </script>
 </body>
