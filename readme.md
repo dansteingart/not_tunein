@@ -19,7 +19,7 @@ The station list is a [google sheet](https://docs.google.com/spreadsheets/d/1eCQ
 ## Usage
 Invoke with 
 ```
-python3 note_tunein.py PORT
+python3 not_tunein.py PORT
 ```
 where `PORT` is your desired http port. Defaults to `9000`. Then go to `http://localhost:PORT` or wherever. 
 
