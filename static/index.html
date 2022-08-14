@@ -116,7 +116,7 @@
         }
         )
 
-        
+
 
         get_volume();
         fit();
@@ -130,23 +130,12 @@
 
     }
 
-    $("#go").click((e)=>{
-        out = get_state();
-        console.log(out);
-        $.post("/play_station",out,(data)=>{console.log(data)})
-    })
-
-
-    $("#stop").click((e)=>{
-        out = get_state();
-        console.log(out);
-        $.post("/stop",out,(data)=>{console.log(data)})
-    })
+    $("#go").click((e)=>{$.post("/play_station",get_state(),(data)=>{console.log(data)})})
+    $("#stop").click((e)=>{$.post("/stop",get_state(),(data)=>{console.log(data)})})
 
     $("#sleep").click((e)=>{
         out = get_state();
         out['sleep'] = $("#sleeps").val()
-        console.log(out);
         $.post("/sleep",out,(data)=>{console.log(data)})
     })
 
@@ -158,7 +147,6 @@
     {
         out = get_state();
         out['volume'] = $("#volume").val()
-        console.log(out);
         $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);})
     }
 
@@ -166,7 +154,6 @@
     {
         out = get_state();
         out['volume'] = vol;
-        console.log(out);
         $.post("/set_volume",out,(data)=>{console.log(data); get_volume();})
     }
 
@@ -182,6 +169,7 @@
     function get_state_cookie(){return JSON.parse(window.localStorage.getItem("state"))}
 
     $("#zone").on('change',()=>{get_volume(); write_state_cookie();})
+    $("#station").on('change',()=>{write_state_cookie();})
     $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
     $("#vdown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
 
