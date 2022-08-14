@@ -1,16 +1,17 @@
 <html>
 <head>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
     <script src="/static/jquery-3.6.0.min.js"></script>
     <style>
 
     body{
         font-family: Helvetica;
         font-size: 100px;
-          -webkit-touch-callout:none;
+        --webkit-touch-callout:none;
 
     }
 
-    div{          -webkit-touch-callout:none;}
+    div {--webkit-touch-callout:none;}
 
     select {
         appearance: none;
@@ -98,31 +99,52 @@
         {
             $(`#${key}`).empty()        
             $.each(things[key],(kk,vv)=>{$(`#${key}`).append(`<option value="${kk}">${kk}</option>`)})
+            try {
+                    state = get_state_cookie();
+                    console.log(key);
+                    console.log(state)
+                    val = state[key]
+                    if (val != null) 
+                    {
+                        $(`#${key}`).val(val);
+                        get_volume();
+                    }
+                
+                }  
+            catch(e) {console(e)}
+                
         }
         )
+
+        
 
         get_volume();
         fit();
     }
 
-    $("#go").click((e)=>{
+    function get_state()
+    {
         out = {}
         $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        return out
+
+    }
+
+    $("#go").click((e)=>{
+        out = get_state();
         console.log(out);
         $.post("/play_station",out,(data)=>{console.log(data)})
     })
 
 
     $("#stop").click((e)=>{
-        out = {}
-        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out = get_state();
         console.log(out);
         $.post("/stop",out,(data)=>{console.log(data)})
     })
 
     $("#sleep").click((e)=>{
-        out = {}
-        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out = get_state();
         out['sleep'] = $("#sleeps").val()
         console.log(out);
         $.post("/sleep",out,(data)=>{console.log(data)})
@@ -134,20 +156,15 @@
     
     function get_volume()
     {
-        out = {}
-        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out = get_state();
         out['volume'] = $("#volume").val()
         console.log(out);
-        $.post("/get_volume",out,(data)=>{
-            console.log(data);
-            $("#volume").val(data['volume']);
-        })
+        $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);})
     }
 
     function set_volume(vol)
     {
-        out = {}
-        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()});
+        out = get_state();
         out['volume'] = vol;
         console.log(out);
         $.post("/set_volume",out,(data)=>{console.log(data); get_volume();})
@@ -161,9 +178,10 @@
         $("#zone").width($("#holdz").width())
     }
 
-    $("#zone").on('change',()=>{get_volume()})
+    function write_state_cookie(){window.localStorage.setItem("state",JSON.stringify(get_state()))}
+    function get_state_cookie(){return JSON.parse(window.localStorage.getItem("state"))}
 
-
+    $("#zone").on('change',()=>{get_volume(); write_state_cookie();})
     $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
     $("#vdown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
 
