@@ -52,6 +52,7 @@
         opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
         -webkit-transition: .2s; /* 0.2 seconds transition on hover */
         transition: opacity .2s;
+        display:none;
     }
 
     .hold
@@ -78,7 +79,7 @@
 
     </div>
     <br>
-    <a id="vup">V↑</a>              <a id="vdown">V↓</a>
+    <a id="vup"> ++ </a> <span id="svol"></span> <a id="vdown"> -- </a>
     <br><br>
     <div class="slidecontainer">
         <input type="range" min="0" max="100" value="50" class="slider" id="volume">
@@ -147,7 +148,12 @@
     {
         out = get_state();
         out['volume'] = $("#volume").val()
-        $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);})
+        $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);
+        
+        dd = data['volume']
+        if (parseInt(dd) < 10) dd = "0"+dd;
+        $("#svol").html(dd)
+        })
     }
 
     function set_volume(vol)
