@@ -79,7 +79,7 @@
 
     </div>
     <br>
-    <a id="vup"> ++ </a> <span id="svol"></span> <a id="vdown"> -- </a>
+    <a id="vupup"> ++ </a> <a id="vup"> + </a> <span id="svol"></span> <a id="vdown"> - </a><a id="vdowndown"> -- </a>
     <br><br>
     <div class="slidecontainer">
         <input type="range" min="0" max="100" value="50" class="slider" id="volume">
@@ -176,8 +176,10 @@
 
     $("#zone").on('change',()=>{get_volume(); write_state_cookie();})
     $("#station").on('change',()=>{write_state_cookie();})
-    $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
-    $("#vdown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
+    $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+1)})
+    $("#vupup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
+    $("#vdown").click((e)=>{  set_volume(parseInt($("#volume").val())-1)})
+    $("#vdowndown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
 
 
     </script>
