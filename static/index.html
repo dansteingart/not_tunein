@@ -65,7 +65,7 @@
     </style>
 </head>
 <body>
-    On <select id="zone"></select><br>
+    <span id='zoner'>On <select id="zone"></select></span><br>
     <div id='thingdoer'><a id="go" class="play">play</a> <select id="station"></select> or <br>
     <a id="stop" class="stop">stop</a> or <br>
     <a id="sleep" class="sleep">sleep</a> in
@@ -96,6 +96,7 @@
 
     function build_lists()
     {
+        console.log("building lists")
         $.each(things,(key,val)=>
         {
             $(`#${key}`).empty()        
@@ -112,7 +113,7 @@
                     }
                 
                 }  
-            catch(e) {console(e)}
+            catch(e) {console.log(e)}
                 
         }
         )
