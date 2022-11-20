@@ -3,12 +3,14 @@
 ##Notes: Not TuneIn Radio Controller for Sonos,MPD
 
 from flask import Flask, jsonify, request
-from soco import SoCo, discover
 import json
 import requests
 import sys
 from subprocess import getoutput as go
 from settings import *
+
+if BACKEND == "sonos": from soco import SoCo, discover
+
 
 PORT = 9000
 

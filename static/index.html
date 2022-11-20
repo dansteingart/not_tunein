@@ -65,7 +65,7 @@
     </style>
 </head>
 <body>
-    <span id='zoner'>On <select id="zone"></select></span><br>
+    <span id='zoner'>On <select id="zone"></select><br></span>
     <div id='thingdoer'><a id="go" class="play">play</a> <select id="station"></select> or <br>
     <a id="stop" class="stop">stop</a> or <br>
     <a id="sleep" class="sleep">sleep</a> in
@@ -115,6 +115,9 @@
                 }  
             catch(e) {console.log(e)}
                 
+        
+            if (things['zone']['mpc']=='mpc') $("#zoner").hide();
+
         }
         )
 

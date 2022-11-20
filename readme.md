@@ -9,8 +9,10 @@ So as one should, when I whined, I took action, and here's the result. Run this 
 ## Requirements
 - Python > 3.7
 - Requests 
-- SoCo
+- SoCo  (if using sonos)
+- MPD/MPC (if playing directly on a Pi, for example)
 - flask
+
 
 Just `python3 -m pip install -r requirements.txt` and you're good.
 
