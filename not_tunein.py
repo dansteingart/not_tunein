@@ -42,7 +42,7 @@ def get_vol_mpc():
 
 def zoner():
     if BACKEND == "sonos":
-        for zone in discover():
+        for zone in discover(allow_network_scan=True):
             print(zone.player_name,zone.ip_address)
             zs[zone.player_name] = zone.ip_address
     if BACKEND == "mpc": zs['mpc'] = 'mpc'
