@@ -47,7 +47,9 @@ def zoner():
             zs[zone.player_name] = zone.ip_address
     if BACKEND == "mpc": zs['mpc'] = 'mpc'
     
+skeys = None    
 def stationer():
+    global skeys
     surl = STATIONSCSV
     rs = requests.get(surl).text.split("\n")
     rs.pop(0) #assume title, url, notes 
@@ -56,6 +58,7 @@ def stationer():
             p = r.split("\t")
             stations[p[0]] = p[1]
         except Exception as E: None
+    skeys = list(stations.keys())
 
 zoner()
 
@@ -92,7 +95,8 @@ def play_station():
         out = {'result':'success','action':f"playing {station} on {zone}"}    
     if BACKEND == "mpc":
         clear_mpc()
-        add_mpc(stations[station])
+        try: add_mpc(stations[station])
+        except: add_mpc(stations[skeys[int(station)]])
         play_mpc()
         out = {'result':'success','action':f"playing {station}"}    
 
