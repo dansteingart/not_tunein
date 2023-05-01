@@ -129,8 +129,9 @@ def sleep():
 @app.route('/set_volume',methods = ['POST'])
 def set_volume():
     data = request.form
-    volume = int(data['volume'])
+    volume = data['volume']
     if BACKEND == "sonos": 
+        volume = int(data['volume'])
         zone = data['zone']
         SoCo(zs[zone]).volume = volume
         out = {'result':'success','action':f"{zone} volume set to {volume}"}    
