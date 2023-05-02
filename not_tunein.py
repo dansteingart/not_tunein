@@ -148,7 +148,7 @@ def set_volume():
         volume = int(data['volume'])
         zone = data['zone']
         SoCo(zs[zone]).volume = volume
-        socketio.emit("volume",json.dumps({'volume':vol}))
+        socketio.emit("volume",json.dumps({'volume':volume}))
         out = {'result':'success','action':f"{zone} volume set to {volume}"}    
     if BACKEND == "mpc": 
         print(volume)
