@@ -8,6 +8,7 @@ import requests
 import sys
 from subprocess import getoutput as go
 from settings import *
+from flask_socketio import SocketIO, emit, send
 
 if BACKEND == "sonos": from soco import SoCo, discover
 
@@ -25,6 +26,7 @@ zs = {}
 stations = {}
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 
 def clear_mpc(): go("mpc clear")
 
@@ -146,9 +148,13 @@ def set_volume():
         volume = int(data['volume'])
         zone = data['zone']
         SoCo(zs[zone]).volume = volume
+        socketio.emit("volume",json.dumps({'volume':vol}))
         out = {'result':'success','action':f"{zone} volume set to {volume}"}    
     if BACKEND == "mpc": 
+        print(volume)
         vol_mpc(volume)
+        vol = get_vol_mpc()
+        socketio.emit("volume",{'volume':vol})
         out = {'result':'success','action':f"volume set to {volume}"}    
 
     return jsonify(out)
@@ -164,4 +170,4 @@ def get_volume():
 
     return jsonify(out)
 
-app.run(port=PORT,host="0.0.0.0")
+socketio.run(app,port=PORT,host="0.0.0.0")

@@ -2,6 +2,7 @@
 <head>
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
     <script src="/static/jquery-3.6.0.min.js"></script>
+    <script src="/static/socket.io.js"></script>
     <style>
 
     body{
@@ -90,6 +91,11 @@
     
     <script>
 
+    var socket = io(); 
+    socket.on('connect', function() {socket.emit('my event', {data: 'I\'m connected!'});});
+    socket.on('volume', (data)=>{dd = data['volume'];voldo(dd)});
+
+
     things = {'zone':{},'station':{}};
 
     $.each(things,(key,val)=>{$.get(`/get_${key}`, (data) =>{things[key] = data;build_lists();})})
@@ -135,6 +141,13 @@
 
     }
 
+    function voldo(dd)
+    {
+        $("#volume").val(parseInt(dd))
+        if (parseInt(dd) < 10) dd = "0"+dd;
+        $("#svol").html(dd)
+    }
+
     $("#go").click((e)=>{$.post("/play_station",get_state(),(data)=>{console.log(data)})})
     $("#stop").click((e)=>{$.post("/stop",get_state(),(data)=>{console.log(data)})})
 
@@ -155,8 +168,7 @@
         $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);
         
         dd = data['volume']
-        if (parseInt(dd) < 10) dd = "0"+dd;
-        $("#svol").html(dd)
+        voldo(dd);
         })
     }
 
