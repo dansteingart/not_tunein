@@ -40,6 +40,11 @@ def get_vol_mpc():
     vv = go("mpc volume").split(":")[1].strip().replace("%","")
     return vv
 
+def get_status_mpc():
+    vv = go("mpc")
+    return vv
+
+
 def zoner():
     if BACKEND == "sonos":
         for zone in discover(allow_network_scan=True):
@@ -82,6 +87,13 @@ def rezone():
 def restation():
     stationer()
     return jsonify(stations)
+
+@app.route('/mpc_status')
+def mpc_status():
+    if BACKEND == "mpc": foo = get_status_mpc()
+    else: foo = "not mpc"
+    return foo
+
 
 
 @app.route('/play_station',methods = ['POST'])
