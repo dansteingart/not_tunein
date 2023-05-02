@@ -170,4 +170,4 @@ def get_volume():
 
     return jsonify(out)
 
-socketio.run(app,port=PORT,host="0.0.0.0")
+socketio.run(app,port=PORT,host="0.0.0.0",allow_unsafe_werkzeug=True)
