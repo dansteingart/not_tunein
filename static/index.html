@@ -50,7 +50,7 @@
     .slider {
         -webkit-appearance: none;  /* Override default CSS styles */
         appearance: none;
-        width: 100%; /* Full-width */#th
+        width: 100%; /* Full-width */
         height: 10px; /* Specified height */
         background: #EFEFEF; /* Grey background */
         color: #222;
@@ -207,36 +207,75 @@
         if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {e.preventDefault();}
     }, false);
 
+
+    sr = false;
     $(window).on("keydown", (e)=> {
         code = e.originalEvent.code;
         console.log(code);
 
         if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+5)
-        if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-5)
-        if (code == "ArrowUp")
+        else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-5)
+        else if (code == "ArrowUp")
         {
             nv  = $("#station").find('option:selected').prev().val()
             if (nv != undefined) $("#station").val(nv)
             fit()
         } 
-        if (code == "ArrowDown")
+        else if (code == "ArrowDown")
         {
             nv  = $("#station").find('option:selected').next().val()
             if (nv != undefined) $("#station").val(nv)
             fit()
         } 
-        if (code == "Enter"){
-            $("#go").click();
-            $("#go").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+        else if (code == "Enter"){
+
+            if (!sr)
+            {
+                $("#go").click();
+                $("#go").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+            }
+            else
+            {
+                $("#stop").click();
+               $("#stop").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+
+            }
 
         } 
-        if (code == "KeyS"){
-            $("#stop").click();
-            $("#stop").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+
+        else if (code == "ShiftRight") sr = true;
+
+        else {
+
+            cc = code.replace("Key","").toLowerCase();
+            console.log(cc)
+
+            var options = $("#station").find('option');
+            var selectedOption = null;
+            options.each(function(o) {
+            var optionValue = $(this).val().toLowerCase();
+                if (optionValue.startsWith(cc)) {
+                    console.log("hoohaa");
+                    selectedOption = $(this);
+                    return false; // break out of the each loop
+                }
+            });
+    
+            if (selectedOption) {
+            options.removeAttr('selected');
+            selectedOption.attr('selected', 'selected');
+            fit();
+            }
 
         } 
 
     })
+    
+    $(window).on("keyup", (e)=> {        
+        code = e.originalEvent.code;
+        if (code == "ShiftRight") sr = false;
+
+ })
 
 
     </script>
