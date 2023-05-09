@@ -5,10 +5,15 @@
     <script src="/static/socket.io.js"></script>
     <style>
 
+
+
     body{
         font-family: Helvetica;
         font-size: 100px;
         --webkit-touch-callout:none;
+        -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* IE 10 and IE 11 */
+  user-select: none; /* Standard syntax */
 
     }
 
@@ -196,6 +201,42 @@
     $("#vupup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
     $("#vdown").click((e)=>{  set_volume(parseInt($("#volume").val())-1)})
     $("#vdowndown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
+
+
+    window.addEventListener("keydown", function(e) {
+        if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {e.preventDefault();}
+    }, false);
+
+    $(window).on("keydown", (e)=> {
+        code = e.originalEvent.code;
+        console.log(code);
+
+        if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+5)
+        if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-5)
+        if (code == "ArrowUp")
+        {
+            nv  = $("#station").find('option:selected').prev().val()
+            if (nv != undefined) $("#station").val(nv)
+            fit()
+        } 
+        if (code == "ArrowDown")
+        {
+            nv  = $("#station").find('option:selected').next().val()
+            if (nv != undefined) $("#station").val(nv)
+            fit()
+        } 
+        if (code == "Enter"){
+            $("#go").click();
+            $("#go").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+
+        } 
+        if (code == "KeyS"){
+            $("#stop").click();
+            $("#stop").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+
+        } 
+
+    })
 
 
     </script>
