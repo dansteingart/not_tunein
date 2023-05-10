@@ -3,19 +3,22 @@
     <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
     <script src="/static/jquery-3.6.0.min.js"></script>
     <script src="/static/socket.io.js"></script>
+    <script src="/static/js.cookie.min.js"></script>
     <style>
 
 
 
-    body{
+    body
+    {
         font-family: Helvetica;
-        font-size: 100px;
+        font-size: 9vw;
         --webkit-touch-callout:none;
-        -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
-  user-select: none; /* Standard syntax */
-
+        --webkit-user-select: none; /* Safari */
+        --ms-user-select: none; /* IE 10 and IE 11 */
+        user-select: none; /* Standard syntax */
     }
+
+   
 
     div {--webkit-touch-callout:none;}
 
@@ -32,7 +35,6 @@
         cursor: inherit;
         line-height: inherit;
 }
-
 
     a 
     {
@@ -72,7 +74,7 @@
 </head>
 <body>
     <span id='zoner'>On <select id="zone"></select><br></span>
-    <div id='thingdoer'><a id="go" class="play">play</a> <select id="station"></select> or <br>
+    <div id='thingdoer' class="main"><a id="go" class="play">play</a> <select id="station"></select> or <br>
     <a id="stop" class="stop">stop</a> or <br>
     <a id="sleep" class="sleep">sleep</a> in
     <select id="sleeps">
@@ -86,7 +88,7 @@
     </div>
     <br>
     <a id="vupup"> ++ </a> <a id="vup"> + </a> <span id="svol"></span> <a id="vdown"> - </a><a id="vdowndown"> -- </a>
-    <br><br>
+    <br>
     <div class="slidecontainer">
         <input type="range" min="0" max="100" value="50" class="slider" id="volume">
     </div>
@@ -195,6 +197,33 @@
     function write_state_cookie(){window.localStorage.setItem("state",JSON.stringify(get_state()))}
     function get_state_cookie(){return JSON.parse(window.localStorage.getItem("state"))}
 
+
+    invstate =  Cookies.get('invstate') === 'true' 
+    console.log(invstate)
+
+//    if (invstate == undefined) invstate = false;
+
+    function invert(ii)
+    {
+        if (ii)
+        {
+            $("body").css("color",'rgb(255,255,255)');
+            $("body").css("background-color",'rgb(0,0,0)');
+            $("select").css("background-color",'rgb(0,0,0)');
+        }
+        else 
+        {
+            $("body").css("color",'rgb(0,0,0)');
+            $("body").css("background-color",'rgb(255,255,255)');
+            $("select").css("background-color",'rgb(255,255,255)');
+        }
+
+        Cookies.set('invstate', ii)
+
+
+    }
+
+    invert(invstate)
     $("#zone").on('change',()=>{get_volume(); write_state_cookie();})
     $("#station").on('change',()=>{write_state_cookie();})
     $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+1)})
@@ -213,8 +242,11 @@
         code = e.originalEvent.code;
         console.log(code);
 
-        if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+5)
-        else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-5)
+        fac = 5
+        if (sr) fac = 1;
+
+        if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+fac)
+        else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-fac)
         else if (code == "ArrowUp")
         {
             nv  = $("#station").find('option:selected').prev().val()
@@ -232,18 +264,20 @@
             if (!sr)
             {
                 $("#go").click();
-                $("#go").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+                $("#go").css({"filter":"brightness(150%)"}).delay(100).queue(function (next) { $(this).css({"filter":"brightness(100%)","transition" : 'opacity 1s ease-in-out'
+}); next();})
             }
             else
             {
-                $("#stop").click();
-               $("#stop").css("filter","brightness(150%)").delay(100).queue(function (next) { $(this).css('filter', 'brightness(100%)'); next();})
+               $("#stop").click();
+               $("#stop").css({"filter":"brightness(150%)"}).delay(100).queue(function (next) { $(this).css({"filter":"brightness(100%)"}); next();})
 
             }
 
         } 
 
-        else if (code == "ShiftRight") sr = true;
+        else if (code.search("Shift") > -1) sr = true;
+        else if (code == "Backslash") {invstate = !invstate; invert(invstate);}
 
         else {
 
@@ -255,15 +289,16 @@
             options.each(function(o) {
             var optionValue = $(this).val().toLowerCase();
                 if (optionValue.startsWith(cc)) {
-                    console.log("hoohaa");
+                    console.log(this);
                     selectedOption = $(this);
                     return false; // break out of the each loop
                 }
             });
     
             if (selectedOption) {
-            options.removeAttr('selected');
-            selectedOption.attr('selected', 'selected');
+                console.log(selectedOption)
+                options.removeAttr('selected');
+                selectedOption.attr('selected', 'selected');
             fit();
             }
 
@@ -272,10 +307,11 @@
     })
     
     $(window).on("keyup", (e)=> {        
-        code = e.originalEvent.code;
-        if (code == "ShiftRight") sr = false;
+            code = e.originalEvent.code;
+            if (code.search("Shift") > -1) sr = false;
+        })
 
- })
+    $(window).on("resize", (e)=> {fit();})
 
 
     </script>
