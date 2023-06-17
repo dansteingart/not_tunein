@@ -2,3 +2,4 @@ nstart.sh
 settings.py
 __pycache__/*
 __pycache__/settings.cpython-39.pyc
+.DS_Store
