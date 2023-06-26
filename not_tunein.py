@@ -12,6 +12,8 @@ from flask_socketio import SocketIO, emit, send
 
 if BACKEND == "sonos": from soco import SoCo, discover
 
+KCRW_url = "https://tracklist-api.kcrw.com/Music/"
+
 
 PORT = 9000
 
@@ -43,9 +45,22 @@ def get_vol_mpc():
     return vv
 
 def get_status_mpc():
-    vv = go("mpc")
-    return vv
+    vv = go("mpc current")
+    track = {}
+    if vv.find("[SomaFM]") > -1:
+        tracks = vv.split("[SomaFM]:")[-1]
+        track['artist'] = tracks.split("-")[0].strip() 
+        track['title'] = tracks.split("-")[-1].strip()
+        track['station'] = vv.split(":")[0]
+    if vv.find("KCRW") > -1:
+        track = requests.get(KCRW_url).json()
+        track['station'] = "KCRW E24"
+    if vv.find("WNYC") > -1:
+        track['station'] = "WNYC"
+        track['program'] = vv.split(":")[-1].strip()
+    return track
 
+    
 
 def zoner():
     if BACKEND == "sonos":
