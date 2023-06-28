@@ -14,7 +14,6 @@ if BACKEND == "sonos": from soco import SoCo, discover
 
 KCRW_url = "https://tracklist-api.kcrw.com/Music/"
 
-
 PORT = 9000
 
 if len(sys.argv) > 1:
@@ -112,6 +111,9 @@ def mpc_status():
     return foo
 
 
+
+@socketio.on("system_query")
+def system_response(data): socketio.emit("system_update",{'system':BACKEND})
 
 @app.route('/play_station',methods = ['POST'])
 def play_station():

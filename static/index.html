@@ -18,7 +18,11 @@
         user-select: none; /* Standard syntax */
     }
 
-   
+   .track
+   {
+    font-size: 6vw;
+    color: grey;
+   }
 
     div {--webkit-touch-callout:none;}
 
@@ -75,17 +79,17 @@
 <body>
     <span id='zoner'>On <select id="zone"></select><br></span>
     <div id='thingdoer' class="main"><a id="go" class="play">play</a> <select id="station"></select> or <br>
-    <a id="stop" class="stop">stop</a> or <br>
-    <a id="sleep" class="sleep">sleep</a> in
-    <select id="sleeps">
-        <option value='15'>15</option>
-        <option value='30'>30</option>
-        <option value='45'>45</option>
-        <option value='60'>60</option>
-    </select>
-    minutes
-
-    </div>
+    <a id="stop" class="stop">stop</a>  
+        <span id='sleepid'> or <br><a id="sleep" class="sleep">sleep</a> in
+        <select id="sleeps">
+            <option value='15'>15</option>
+            <option value='30'>30</option>
+            <option value='45'>45</option>
+            <option value='60'>60</option>
+        </select>
+        minutes
+       </span>
+        </div>
     <br>
     <a id="vdowndown"> -- </a> <a id="vdown"> - </a> <span id="svol"></span> <a id="vup"> + </a><a id="vupup"> ++ </a>
     <br>
@@ -93,14 +97,26 @@
         <input type="range" min="0" max="100" value="50" class="slider" id="volume">
     </div>
 
+    <div id="tracks" class="track"></div>
     <span id="holdz" class="hold"></span>
     <span id="holds" class="hold"></span>
     
     <script>
 
     var socket = io(); 
-    socket.on('connect', function() {socket.emit('my event', {data: 'I\'m connected!'});});
+    backend = "";
+    socket.on('connect', function() {socket.emit('system_query', {data: 'I\'m connected!'});});
     socket.on('volume', (data)=>{dd = data['volume'];voldo(dd)});
+
+    socket.on('system_update', (data)=>{if (data['system'] == "mpc" ) {
+        $("#sleepid").hide();
+        backend="mpc";
+        setInterval(function(){$.get("/mpc_status",(data)=>{tracker(data)})},5000);
+    } 
+    
+    
+    
+    });
 
 
     things = {'zone':{},'station':{}};
@@ -155,8 +171,8 @@
         $("#svol").html(dd)
     }
 
-    $("#go").click((e)=>{$.post("/play_station",get_state(),(data)=>{console.log(data)})})
-    $("#stop").click((e)=>{$.post("/stop",get_state(),(data)=>{console.log(data)})})
+    $("#go").click((e)=>{$.post("/play_station",get_state(),(data)=>{console.log(data);fit()})})
+    $("#stop").click((e)=>{$.post("/stop",get_state(),(data)=>{console.log(data);fit()})})
 
     $("#sleep").click((e)=>{
         out = get_state();
@@ -166,7 +182,10 @@
 
     $("#volume").on('change',(e)=>{set_volume($("#volume").val())})
 
-    $("select").on('change',()=>{fit()});
+    $("#station").on('change',(e)=>{console.log("foo")})
+
+
+    $("select").on('change',(e)=>{fit();});
     
     function get_volume()
     {
@@ -192,6 +211,19 @@
         $("#holdz").html($("#zone").val())
         $("#station").width($("#holds").width())
         $("#zone").width($("#holdz").width())
+        if (backend=="mpc") setTimeout(function(){$.get("/mpc_status",(data)=>{tracker(data)})},1000);
+    }
+
+
+    function tracker(data)
+    {
+        console.log(data);
+        out = ""
+        if (data.hasOwnProperty("artist")) out += `${data['artist']}<br>`
+        if (data.hasOwnProperty("title")) out += `${data['title']}<br>`
+        if (data.hasOwnProperty("program")) out += `${data['program']}<br>`
+        $("#tracks").html(out);
+        
     }
 
     function write_state_cookie(){window.localStorage.setItem("state",JSON.stringify(get_state()))}
@@ -240,7 +272,6 @@
     sr = false;
     $(window).on("keydown", (e)=> {
         code = e.originalEvent.code;
-        console.log(code);
 
         fac = 5
         if (sr) fac = 1;
