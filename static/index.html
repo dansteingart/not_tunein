@@ -18,11 +18,12 @@
         user-select: none; /* Standard syntax */
     }
 
-   .track
+   .track a
    {
     font-size: 6vw;
     color: grey;
    }
+
 
     div {--webkit-touch-callout:none;}
 
@@ -215,6 +216,12 @@
     }
 
 
+    function linker(str)
+    {
+        ss = str.replaceAll(" ","+").replaceAll("-","+").replaceAll("<br>","+");
+        return `<a href="music://itunes.apple.com/search?term=${ss}">${str}</a>`
+    }
+
     function tracker(data)
     {
         console.log(data);
@@ -222,7 +229,7 @@
         if (data.hasOwnProperty("artist")) out += `${data['artist']}<br>`
         if (data.hasOwnProperty("title")) out += `${data['title']}<br>`
         if (data.hasOwnProperty("program")) out += `${data['program']}<br>`
-        $("#tracks").html(out);
+        $("#tracks").html(linker(out));
         
     }
 
