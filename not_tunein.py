@@ -57,17 +57,24 @@ def get_vol_mpc():
 def get_status_mpc():
     vv = go("mpc current")
     track = {}
-    if vv.find("[SomaFM]") > -1:
-        tracks = vv.split("[SomaFM]:")[-1]
-        track['artist'] = tracks.split("-")[0].strip() 
-        track['title'] = tracks.split("-")[-1].strip()
-        track['station'] = vv.split(":")[0]
-    if vv.find("KCRW") > -1:
-        track = requests.get(KCRW_url).json()
-        track['station'] = "KCRW E24"
-    if vv.find("WNYC") > -1:
-        track['station'] = "WNYC"
-        track['program'] = vv.split(":")[-1].strip()
+    try:
+        if vv.find("[SomaFM]") > -1:
+            tracks = vv.split("[SomaFM]:")[-1]
+            track['artist'] = tracks.split("-")[0].strip() 
+            track['title'] = tracks.split("-")[-1].strip()
+            track['station'] = vv.split(":")[0]
+        elif vv.find("KCRW") > -1:
+            track = requests.get(KCRW_url).json()
+            track['station'] = "KCRW E24"
+        elif vv.find("WNYC") > -1:
+            track['station'] = "WNYC"
+            track['program'] = vv.split(":")[-1].strip()
+        else:
+            track['station'] = vv.split(":")[0]
+            tracks = vv.split(":")[-1]
+            track['artist'] = tracks.split("-")[0].strip() 
+            track['title'] = tracks.split("-")[-1].strip()
+    except Exception as E: track['artist'] = str(E)
     return track
 
     
