@@ -9,6 +9,17 @@ import sys
 from subprocess import getoutput as go
 from settings import *
 from flask_socketio import SocketIO, emit, send
+import threading
+import time
+
+def setTimeout(delay):
+    timer = threading.Timer(delay, stop_mpc)
+    timer.start()
+    print(f"sleeping in {delay}")
+    return timer
+
+
+
 
 if BACKEND == "sonos": from soco import SoCo, discover
 
@@ -142,6 +153,7 @@ def stop():
         SoCo(zs[zone]).stop()
         out = {'result':'success','action':f"stopped {zone}"}    
     if BACKEND == "mpc":
+        zone = "mpc"
         clear_mpc()
         stop_mpc()
         out = {'result':'success','action':f"stopped"}    
@@ -154,8 +166,24 @@ def sleep():
     if BACKEND == "sonos": 
         zone = data['zone']
         SoCo(zs[zone]).set_sleep_timer(sleep)
-        out = {'result':'success','action':f"{zone} sleeping in {data['sleep']} minutes"}    
+    if BACKEND == "mpc": 
+        zone = "mpc"
+        tt = setTimeout(sleep)
+    out = {'result':'success','action':f"{zone} sleeping in {data['sleep']} minutes"}    
     return jsonify(out)
+
+@app.route('/sleepcancel',methods = ['POST'])
+def sleepcancel():
+    out = {}
+    if BACKEND == "mpc": 
+        try: 
+            tt.cancel()
+            sleep_cancel = "worked"
+        except: 
+            sleep_cancel = "didn't work" 
+        out = {'result': sleep_cancel}    
+    return jsonify(out)
+
 
 @app.route('/set_volume',methods = ['POST'])
 def set_volume():

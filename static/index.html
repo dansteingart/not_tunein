@@ -110,7 +110,7 @@
     socket.on('volume', (data)=>{dd = data['volume'];voldo(dd)});
 
     socket.on('system_update', (data)=>{if (data['system'] == "mpc" ) {
-        $("#sleepid").hide();
+        //$("#sleepid").hide();
         backend="mpc";
         setInterval(function(){$.get("/mpc_status",(data)=>{tracker(data)})},5000);
     } 
