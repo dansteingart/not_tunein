@@ -287,15 +287,35 @@
         else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-fac)
         else if (code == "ArrowUp")
         {
+	    if (!sr)
+	   {
             nv  = $("#station").find('option:selected').prev().val()
             if (nv != undefined) $("#station").val(nv)
             fit()
+	   }
+	   else
+           {
+            nv  = $("#zone").find('option:selected').prev().val()
+            if (nv != undefined) $("#zone").val(nv)
+            fit()
+           }
+
         } 
         else if (code == "ArrowDown")
         {
+	    if (!sr)
+	   {
             nv  = $("#station").find('option:selected').next().val()
             if (nv != undefined) $("#station").val(nv)
             fit()
+	   }
+          else
+           {
+            nv  = $("#zone").find('option:selected').next().val()
+            if (nv != undefined) $("#zone").val(nv)
+            fit()
+           }
+  
         } 
         else if (code == "Enter"){
 
