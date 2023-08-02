@@ -219,7 +219,7 @@
     function linker(str)
     {
         ss = str.replaceAll(" ","+").replaceAll("-","+").replaceAll("<br>","+");
-        return `<a href="music://itunes.apple.com/search?term=${ss}">${str}</a>`
+        return `<a id="trac" href="music://itunes.apple.com/search?term=${ss}">${str}</a>`
     }
 
     function tracker(data)
@@ -285,6 +285,7 @@
 
         if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+fac)
         else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-fac)
+        else if (code == "KeyT") $("#trac")[0].click();
         else if (code == "ArrowUp")
         {
 	    if (!sr)
