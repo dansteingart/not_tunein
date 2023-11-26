@@ -89,13 +89,14 @@ def zoner():
 skeys = None    
 def stationer():
     global skeys
+    skeys = None
     surl = STATIONSCSV
     rs = requests.get(surl).text.split("\n")
     rs.pop(0) #assume title, url, notes 
     for r in rs:
         try:
             p = r.split("\t")
-            stations[p[0]] = p[1]
+            stations[p[0].strip()] = p[1]
         except Exception as E: None
     skeys = list(stations.keys())
 
@@ -148,7 +149,7 @@ def play_station():
         except: add_mpc(stations[skeys[int(station)]])
         play_mpc()
         out = {'result':'success','action':f"playing {station}"}    
-
+    socketio.emit("play",out)
     return jsonify(out)
 
 @app.route('/stop',methods = ['POST', 'GET'])

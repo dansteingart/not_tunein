@@ -105,9 +105,18 @@
     <script>
 
     var socket = io(); 
+    whatson = undefined
     backend = "";
     socket.on('connect', function() {socket.emit('system_query', {data: 'I\'m connected!'});});
     socket.on('volume', (data)=>{dd = data['volume'];voldo(dd)});
+
+    socket.on('play', (data)=>{
+        whatson = data['action'].replace("playing","").trim();
+        $("#station").val(whatson)
+        fit();
+        
+    });
+
 
     socket.on('system_update', (data)=>{if (data['system'] == "mpc" ) {
         //$("#sleepid").hide();
