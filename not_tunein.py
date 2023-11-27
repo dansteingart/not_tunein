@@ -19,8 +19,6 @@ def setTimeout(delay):
     return timer
 
 
-
-
 if BACKEND == "sonos": from soco import SoCo, discover
 
 KCRW_url = "https://tracklist-api.kcrw.com/Music/"
@@ -146,7 +144,9 @@ def play_station():
     if BACKEND == "mpc":
         clear_mpc()
         try: add_mpc(stations[station])
-        except: add_mpc(stations[skeys[int(station)]])
+        except: 
+              station = skeys[int(station)]
+              add_mpc(stations[station])
         play_mpc()
         out = {'result':'success','action':f"playing {station}"}    
     socketio.emit("play",out)
