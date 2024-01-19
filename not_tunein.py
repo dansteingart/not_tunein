@@ -105,6 +105,10 @@ stationer()
 @app.route('/')
 def index(): return open("static/index.html").read()
 
+@app.route('/local')
+def local(): return open("static/pindex.html").read()
+
+
 @app.route('/get_zone')
 def get_zones(): return jsonify(zs)
 

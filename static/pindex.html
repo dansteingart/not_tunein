@@ -1,0 +1,376 @@
+<html>
+<head>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon" />
+    <script src="/static/jquery-3.6.0.min.js"></script>
+    <script src="/static/socket.io.js"></script>
+    <script src="/static/js.cookie.min.js"></script>
+    <style>
+
+
+
+    body
+    {
+        font-family: Helvetica;
+        font-size: 9vw;
+        --webkit-touch-callout:none;
+        --webkit-user-select: none; /* Safari */
+        --ms-user-select: none; /* IE 10 and IE 11 */
+        user-select: none; /* Standard syntax */
+    }
+
+   .track a
+   {
+    font-size: 6vw;
+    color: grey;
+   }
+
+
+    div {--webkit-touch-callout:none;}
+
+    select {
+        appearance: none;
+        color: lightblue;
+        background-color: white;
+        border: none;
+        outline: none;
+        padding: 0 0em 0 0;
+        margin: 0;
+        font-family: inherit;
+        font-size: inherit;
+        cursor: inherit;
+        line-height: inherit;
+}
+
+    a 
+    {
+        text-decoration: none;
+    }
+
+    a:hover { filter: brightness(150%); }
+    a:active { filter: brightness(150%); }
+
+    .play {  color: rgb(0,150,0); }
+    .stop {  color: rgb(150,0,0); }
+    .sleep { color: rgb(210,150,0); }
+
+    /* The slider itself */
+    .slider {
+        -webkit-appearance: none;  /* Override default CSS styles */
+        appearance: none;
+        width: 100%; /* Full-width */
+        height: 10px; /* Specified height */
+        background: #EFEFEF; /* Grey background */
+        color: #222;
+        outline: none; /* Remove outline */
+        opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+        -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+        transition: opacity .2s;
+        display:none;
+    }
+
+    .hold
+    {
+        color: white;
+        display: none;
+    }
+    
+
+    </style>
+</head>
+<body>
+    <div id='thingdoer' class="main"><a id="go" class="play">play</a> <select id="station"></select> or <br>
+    <a id="stop" class="stop">stop</a>  
+        <span id='sleepid'> or <br><a id="sleep" class="sleep">sleep</a> in
+        <select id="sleeps">
+            <option value='15'>15</option>
+            <option value='30'>30</option>
+            <option value='45'>45</option>
+            <option value='60'>60</option>
+        </select>
+        minutes
+       </span>
+        </div>
+    <br>
+    <a id="vdowndown"> -- </a> <a id="vdown"> - </a> <span id="svol"></span> <a id="vup"> + </a><a id="vupup"> ++ </a>
+    <br>
+    <div class="slidecontainer">
+        <input type="range" min="0" max="100" value="50" class="slider" id="volume">
+    </div>
+
+    <div id="tracks" class="track"></div>
+    <span id="holdz" class="hold"></span>
+    <span id="holds" class="hold"></span>
+    
+    <script>
+
+
+    radio = new Audio();
+    radio.preload = 'auto';
+    radio.crossOrigin = 'anonymous';
+    radio.volume = .5;
+    volume = 50;
+    voldo(volume);
+
+
+    things = {'station':{}};
+
+    urls = undefined;
+    $.get("/restation",(data)=>{urls=data;});
+
+    $.each(things,(key,val)=>{$.get(`/get_${key}`, (data) =>{things[key] = data;build_lists();})})
+
+    function build_lists()
+    {
+        console.log("building lists")
+        $.each(things,(key,val)=>
+        {
+            $(`#${key}`).empty()        
+            $.each(things[key],(kk,vv)=>{$(`#${key}`).append(`<option value="${kk}">${kk}</option>`)})
+            try {
+                    state = get_state_cookie();
+                    console.log(key);
+                    console.log(state)
+                    val = state[key]
+                    if (val != null) 
+                    {
+                        $(`#${key}`).val(val);
+                        get_volume();
+                    }
+                
+                }  
+            catch(e) {console.log(e)}
+                
+        
+
+        }
+        )
+
+
+
+        get_volume();
+        fit();
+    }
+
+
+    function voldo(dd)
+    {
+        $("#volume").val(parseInt(dd))
+        if (parseInt(dd) < 10) dd = "0"+dd;
+        $("#svol").html(dd)
+    }
+
+
+    function get_state()
+    {
+        out = {}
+        $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        return out
+
+    }
+    $("#go").click((e)=>{s = get_state(); console.log(s); radio.src=urls[s['station']]; radio.play()} )
+    $("#stop").click((e)=>{radio.pause();})
+
+    $("#sleep").click((e)=>{
+        out = get_state();
+        out['sleep'] = $("#sleeps").val()
+        $.post("/sleep",out,(data)=>{console.log(data)})
+    })
+
+    $("#volume").on('change',(e)=>{set_volume($("#volume").val())})
+
+    $("#station").on('change',(e)=>{console.log("foo")})
+
+
+    $("select").on('change',(e)=>{fit();});
+    
+    function get_volume()
+    {
+        out = get_state();
+        out['volume'] = $("#volume").val()
+        // $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);
+        
+        // dd = data['volume']
+        // voldo(dd);
+        // })
+        voldo(out['volume']);
+    }
+
+    function set_volume(vol)
+    {
+        out = get_state();
+        out['volume'] = vol;
+        //$.post("/set_volume",out,(data)=>{console.log(data); get_volume();})
+        volume = vol;
+        voldo(volume);
+        get_volume();
+        radio.volume = volume/100;
+    }
+
+    function fit()
+    {
+        $("#holds").html($("#station").val())
+        $("#holdz").html($("#zone").val())
+        $("#station").width($("#holds").width())
+        $("#zone").width($("#holdz").width())
+    }
+
+
+    function linker(str)
+    {
+        ss = str.replaceAll(" ","+").replaceAll("-","+").replaceAll("<br>","+");
+        return `<a id="trac" href="music://itunes.apple.com/search?term=${ss}">${str}</a>`
+    }
+
+    function tracker(data)
+    {
+        console.log(data);
+        out = ""
+        if (data.hasOwnProperty("artist")) out += `${data['artist']}<br>`
+        if (data.hasOwnProperty("title")) out += `${data['title']}<br>`
+        if (data.hasOwnProperty("program")) out += `${data['program']}<br>`
+        $("#tracks").html(linker(out));
+        
+    }
+
+    function write_state_cookie(){window.localStorage.setItem("state",JSON.stringify(get_state()))}
+    function get_state_cookie(){return JSON.parse(window.localStorage.getItem("state"))}
+
+
+    invstate =  Cookies.get('invstate') === 'true' 
+    console.log(invstate)
+
+//    if (invstate == undefined) invstate = false;
+
+    function invert(ii)
+    {
+        if (ii)
+        {
+            $("body").css("color",'rgb(255,255,255)');
+            $("body").css("background-color",'rgb(0,0,0)');
+            $("select").css("background-color",'rgb(0,0,0)');
+        }
+        else 
+        {
+            $("body").css("color",'rgb(0,0,0)');
+            $("body").css("background-color",'rgb(255,255,255)');
+            $("select").css("background-color",'rgb(255,255,255)');
+        }
+
+        Cookies.set('invstate', ii)
+
+
+    }
+
+    invert(invstate)
+    $("#station").on('change',()=>{write_state_cookie();})
+    $("#vup").click((e)=>{  set_volume(parseInt($("#volume").val())+1)})
+    $("#vupup").click((e)=>{  set_volume(parseInt($("#volume").val())+5)})
+    $("#vdown").click((e)=>{  set_volume(parseInt($("#volume").val())-1)})
+    $("#vdowndown").click((e)=>{set_volume(parseInt($("#volume").val())-5)})
+
+
+    window.addEventListener("keydown", function(e) {
+        if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {e.preventDefault();}
+    }, false);
+
+
+    sr = false;
+    $(window).on("keydown", (e)=> {
+        code = e.originalEvent.code;
+
+        fac = 5
+        if (sr) fac = 1;
+
+        if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+fac)
+        else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-fac)
+        else if (code == "KeyT") $("#trac")[0].click();
+        else if (code == "ArrowUp")
+        {
+	    if (!sr)
+	   {
+            nv  = $("#station").find('option:selected').prev().val()
+            if (nv != undefined) $("#station").val(nv)
+            fit()
+	   }
+	   else
+           {
+            nv  = $("#zone").find('option:selected').prev().val()
+            if (nv != undefined) $("#zone").val(nv)
+            fit()
+           }
+
+        } 
+        else if (code == "ArrowDown")
+        {
+	    if (!sr)
+	   {
+            nv  = $("#station").find('option:selected').next().val()
+            if (nv != undefined) $("#station").val(nv)
+            fit()
+	   }
+          else
+           {
+            nv  = $("#zone").find('option:selected').next().val()
+            if (nv != undefined) $("#zone").val(nv)
+            fit()
+           }
+  
+        } 
+        else if (code == "Enter"){
+
+            if (!sr)
+            {
+                $("#go").click();
+                $("#go").css({"filter":"brightness(150%)"}).delay(100).queue(function (next) { $(this).css({"filter":"brightness(100%)","transition" : 'opacity 1s ease-in-out'
+}); next();})
+            }
+            else
+            {
+               $("#stop").click();
+               $("#stop").css({"filter":"brightness(150%)"}).delay(100).queue(function (next) { $(this).css({"filter":"brightness(100%)"}); next();})
+
+            }
+
+        } 
+
+        else if (code.search("Shift") > -1) sr = true;
+        else if (code == "Backslash") {invstate = !invstate; invert(invstate);}
+
+        else {
+
+            cc = code.replace("Key","").toLowerCase();
+            console.log(cc)
+
+            var options = $("#station").find('option');
+            var selectedOption = null;
+            options.each(function(o) {
+            var optionValue = $(this).val().toLowerCase();
+                if (optionValue.startsWith(cc)) {
+                    console.log(this);
+                    selectedOption = $(this);
+                    return false; // break out of the each loop
+                }
+            });
+    
+            if (selectedOption) {
+                console.log(selectedOption)
+                options.removeAttr('selected');
+                selectedOption.attr('selected', 'selected');
+            fit();
+            }
+
+        } 
+
+    })
+    
+    $(window).on("keyup", (e)=> {        
+            code = e.originalEvent.code;
+            if (code.search("Shift") > -1) sr = false;
+        })
+
+    $(window).on("resize", (e)=> {fit();})
+
+
+    </script>
+</body>
+</html>
