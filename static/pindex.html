@@ -134,9 +134,8 @@
                     if (val != null) 
                     {
                         $(`#${key}`).val(val);
-                        get_volume();
                     }
-                
+                    set_volume(state['volume']);
                 }  
             catch(e) {console.log(e)}
                 
@@ -164,6 +163,7 @@
     {
         out = {}
         $.each(things,(k,v)=>{out[k]=$(`#${k}`).val()})
+        out['volume'] = parseFloat($("#volume").val())
         return out
 
     }
@@ -178,7 +178,6 @@
 
     $("#volume").on('change',(e)=>{set_volume($("#volume").val())})
 
-    $("#station").on('change',(e)=>{console.log("foo")})
 
 
     $("select").on('change',(e)=>{fit();});
@@ -186,7 +185,6 @@
     function get_volume()
     {
         out = get_state();
-        out['volume'] = $("#volume").val()
         // $.post("/get_volume",out,(data)=>{console.log(data);$("#volume").val(data['volume']);
         
         // dd = data['volume']
@@ -204,6 +202,7 @@
         voldo(volume);
         get_volume();
         radio.volume = volume/100;
+        write_state_cookie();
     }
 
     function fit()
@@ -212,6 +211,7 @@
         $("#holdz").html($("#zone").val())
         $("#station").width($("#holds").width())
         $("#zone").width($("#holdz").width())
+        write_state_cookie();
     }
 
 
