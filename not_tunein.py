@@ -134,13 +134,17 @@ def mpc_status():
 
 
 @socketio.on("system_query")
-def system_response(data): socketio.emit("system_update",{'system':BACKEND})
+def system_response(data): socketio.emit("system_update",{'system':BACKEND,'station':current_station})
+
+current_station = None
 
 @app.route('/play_station',methods = ['POST'])
 def play_station():
+    global current_station
     print(request.form)
     data = request.form
     station = data['station']
+    current_station = station
     if BACKEND == "sonos": 
         zone = data['zone']
         SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
@@ -183,6 +187,7 @@ def sleep():
         tt = setTimeout(sleep)
     out = {'result':'success','action':f"{zone} sleeping in {data['sleep']} minutes"}    
     return jsonify(out)
+
 
 @app.route('/sleepcancel',methods = ['POST'])
 def sleepcancel():
