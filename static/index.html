@@ -198,7 +198,7 @@
     $("#station").on('change',(e)=>{console.log("foo")})
 
 
-    $("select").on('change',(e)=>{fit();});
+    $("select").on('change',(e)=>{$("#go").click();fit();});
     
     function get_volume()
     {
