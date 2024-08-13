@@ -302,6 +302,8 @@
             nv  = $("#station").find('option:selected').prev().val()
             if (nv != undefined) $("#station").val(nv)
             fit()
+	    if (backend=="mpc") $("#go").click(); 
+
 	   }
 	   else
            {
@@ -318,6 +320,8 @@
             nv  = $("#station").find('option:selected').next().val()
             if (nv != undefined) $("#station").val(nv)
             fit()
+	    if (backend=="mpc") $("#go").click(); 
+
 	   }
           else
            {
