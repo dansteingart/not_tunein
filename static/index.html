@@ -122,8 +122,8 @@
         //$("#sleepid").hide();
         backend="mpc";
         console.log(data);
-        $("#station").val(data['station'])
-	fit();
+        if (data['station']!=null) $("#station").val(data['station'])
+	    fit();
         setInterval(function(){$.get("/mpc_status",(data)=>{tracker(data)})},5000);
     } 
     
