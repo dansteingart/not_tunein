@@ -61,7 +61,7 @@ def get_status_mpc():
             track['artist'] = tracks.split("-")[0].strip() 
             track['title'] = tracks.split("-")[-1].strip()
             track['station'] = vv.split(":")[0]
-        elif vv.find("KCRW") > -1:
+        elif vv.find("Eclectic") > -1:
             track = requests.get(KCRW_url).json()
             track['station'] = "KCRW E24"
         elif vv.find("WNYC") > -1:
