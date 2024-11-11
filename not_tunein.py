@@ -53,6 +53,12 @@ def get_vol_mpc():
     return vv
 
 def get_status_mpc():
+    ee = go("mpc")
+    if ee.find("CoreAudio") > -1: 
+        sv = get_vol_mpc()
+        print(go("brew services restart mpd"))
+        time.sleep(.3)
+        vol_mpc(sv)
     vv = go("mpc current")
     track = {}
     try:
