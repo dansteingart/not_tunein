@@ -298,6 +298,9 @@
         if (code == "ArrowRight") set_volume(parseInt($("#volume").val())+fac)
         else if (code == "ArrowLeft") set_volume(parseInt($("#volume").val())-fac)
         else if (code == "KeyT") $("#trac")[0].click();
+        else if (code == "KeyR") $.get("/restation").then(()=>{$.each(things,(key,val)=>{$.get(`/get_${key}`, (data) =>{things[key] = data;build_lists();})})})
+		
+	
         else if (code == "ArrowUp")
         {
 	    if (!sr)
