@@ -23,7 +23,7 @@ if BACKEND == "sonos": from soco import SoCo, discover
 
 KCRW_url = "https://tracklist-api.kcrw.com/Music/"
 
-PORT = 9000
+PORT = 9002
 
 if len(sys.argv) > 1:
     try: 
@@ -154,7 +154,7 @@ def play_station():
     if BACKEND == "sonos": 
         zone = data['zone']
         SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
-        out = {'result':'success','action':f"playing {station} on {zone}"}    
+        out = {'result':'success','station':station,'zone':zone}    
     if BACKEND == "mpc":
         clear_mpc()
         try: add_mpc(stations[station])
@@ -162,7 +162,7 @@ def play_station():
               station = skeys[int(station)]
               add_mpc(stations[station])
         play_mpc()
-        out = {'result':'success','action':f"playing {station}"}    
+        out = {'result':'success','station':station}    
     socketio.emit("play",out)
     return jsonify(out)
 

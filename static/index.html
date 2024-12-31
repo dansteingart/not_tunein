@@ -113,7 +113,8 @@
     socket.on('volume', (data)=>{dd = data['volume'];voldo(dd)});
 
     socket.on('play', (data)=>{
-        whatson = data['action'].replace("playing","").trim();
+        console.log(data);
+        whatson = data['station']
         $("#station").val(whatson);
         fit();
         
