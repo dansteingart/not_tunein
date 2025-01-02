@@ -147,8 +147,8 @@ current_station = None
 @app.route('/play_station',methods = ['POST'])
 def play_station():
     global current_station
-    print(request.form)
-    data = request.form
+    try: data = request.json
+    except: data = request.form
     station = data['station']
     current_station = station
     if BACKEND == "sonos": 
@@ -168,8 +168,8 @@ def play_station():
 
 @app.route('/stop',methods = ['POST', 'GET'])
 def stop():
-    print(request.form)
-    data = request.form
+    try: data = request.json
+    except: data = request.form
     if BACKEND == "sonos": 
         zone = data['zone']
         SoCo(zs[zone]).stop()
@@ -183,7 +183,8 @@ def stop():
 
 @app.route('/sleep',methods = ['POST'])
 def sleep():
-    data = request.form
+    try: data = request.json
+    except: data = request.form
     sleep = int(data['sleep'])*60
     if BACKEND == "sonos": 
         zone = data['zone']
@@ -210,7 +211,8 @@ def sleepcancel():
 
 @app.route('/set_volume',methods = ['POST'])
 def set_volume():
-    data = request.form
+    try: data = request.json
+    except: data = request.form
     volume = data['volume']
     if BACKEND == "sonos": 
         volume = int(data['volume'])
@@ -229,7 +231,8 @@ def set_volume():
 
 @app.route('/get_volume',methods = ['POST'])
 def get_volume():
-    data = request.form
+    try: data = request.json
+    except: data = request.form
     if BACKEND == "sonos": 
         zone = data['zone']
         out = {'result':'success','action':f"got {zone} volume","volume":SoCo(zs[zone]).volume}    
