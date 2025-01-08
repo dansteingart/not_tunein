@@ -23,7 +23,7 @@ if BACKEND == "sonos": from soco import SoCo, discover
 
 KCRW_url = "https://tracklist-api.kcrw.com/Music/"
 
-PORT = 9002
+PORT = 9000
 
 if len(sys.argv) > 1:
     try: 
@@ -160,6 +160,8 @@ def play_station():
         try: add_mpc(stations[station])
         except: 
               station = skeys[int(station)]
+              #print(station)
+              current_station = station
               add_mpc(stations[station])
         play_mpc()
         out = {'result':'success','station':station}    
