@@ -11,6 +11,11 @@ from settings import *
 from flask_socketio import SocketIO, emit, send
 import threading
 import time
+import sys
+from sqlite_utils import Database
+
+osa = False
+if "osa" in sys.argv: osa = True
 
 def setTimeout(delay):
     timer = threading.Timer(delay, stop_mpc)
@@ -38,21 +43,33 @@ stations = {}
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-def clear_mpc(): go("mpc clear")
+def clear_mpc(): 
+    go("mpc clear")
+    if osa: go("osascript -e 'tell application \"Music\" to stop'")
 
 def add_mpc(s): go(f"mpc add {s}")
 
 def play_mpc(): go(f"mpc play")
 
+def play_osa():
+    go("osascript -e 'tell application \"Music\" to play (some track of library playlist 1)'")
+
+
 def stop_mpc(): go(f"mpc stop")
 
-def vol_mpc(i): go(f"mpc volume {i}")
+def vol_mpc(i): 
+    go(f"mpc volume {i}")
+    if osa: 
+        vv = get_vol_mpc()
+        go(f"osascript -e 'tell application \"Music\" to set sound volume to {vv}'")
 
 def get_vol_mpc():
     vv = go("mpc volume").split(":")[1].strip().replace("%","")
     return vv
 
+last_track = {}
 def get_status_mpc():
+    global last_track
     ee = go("mpc")
     if ee.find("CoreAudio") > -1: 
         sv = get_vol_mpc()
@@ -79,6 +96,26 @@ def get_status_mpc():
             track['artist'] = tracks.split("-")[0].strip() 
             track['title'] = tracks.split("-")[-1].strip()
     except Exception as E: track['artist'] = str(E)
+    if osa and current_station == "Apple Music": 
+        try:
+            vv = go("osascript -e 'tell application \"Music\" to get [artist of current track, name of current track]'")
+            parts = vv.split(",")
+            track['artist'] = parts[0].strip()
+            track['title'] = parts[1].strip()
+
+        except Exception as E: None
+    
+    try: 
+        if track['title'] != last_track['title'] and track['title']!="" and track['station'].find("http") ==-1:
+            print(track)
+            track['time'] = time.time()
+            db  = Database("tracks.db")
+            db['tracks'].insert(track,pk='time')
+            db.close()
+            last_track = track
+    except Exception as E: 
+        print(E)
+        last_track = track
     return track
 
     
@@ -133,7 +170,8 @@ def restation():
 
 @app.route('/mpc_status')
 def mpc_status():
-    if BACKEND == "mpc": foo = get_status_mpc()
+    if BACKEND == "mpc": 
+        foo = get_status_mpc()
     else: foo = "not mpc"
     return foo
 
@@ -161,9 +199,10 @@ def play_station():
         except: 
               station = skeys[int(station)]
               #print(station)
-              current_station = station
               add_mpc(stations[station])
-        play_mpc()
+        current_station = station
+        if osa and current_station.find("Apple Music") ==0: play_osa()
+        else: play_mpc()
         out = {'result':'success','station':station}    
     socketio.emit("play",out)
     return jsonify(out)
