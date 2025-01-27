@@ -43,6 +43,19 @@ stations = {}
 app = Flask(__name__)
 socketio = SocketIO(app)
 
+if "mqtt" in sys.argv:
+    import paho.mqtt.client as mqtt
+    print("doing mqtt stuff!")
+    def on_connect(client, userdata, flags, rc):
+        print("Connected with result code "+str(rc))
+
+    def on_disconnect(client, userdata, rc):
+        print("Disconnected with result code "+str(flags))
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    # client.on_connect = on_connect
+    # client.on_disconnect = on_disconnect
+
 def clear_mpc(): 
     go("mpc clear")
     if osa: go("osascript -e 'tell application \"Music\" to stop'")
@@ -53,7 +66,6 @@ def play_mpc(): go(f"mpc play")
 
 def play_osa():
     go("osascript -e 'tell application \"Music\" to play (some track of library playlist 1)'")
-
 
 def stop_mpc(): go(f"mpc stop")
 
@@ -104,15 +116,21 @@ def get_status_mpc():
             track['title'] = parts[1].strip()
 
         except Exception as E: None
-    
+
     try: 
         if track['title'] != last_track['title'] and track['title']!="" and track['station'].find("http") ==-1:
             print(track)
+            track['station'] = current_station
             track['time'] = time.time()
             db  = Database("tracks.db")
             db['tracks'].insert(track,pk='time')
             db.close()
             last_track = track
+
+            if "mqtt" in sys.argv:
+                client.connect(MQTT_BROKER,MQTT_PORT)
+                client.publish(MQTT_TOPIC,json.dumps(track))
+                client.disconnect()
     except Exception as E: 
         print(E)
         last_track = track
@@ -184,7 +202,8 @@ current_station = None
 
 @app.route('/play_station',methods = ['POST'])
 def play_station():
-    global current_station
+    global current_station, state
+    state = current_station
     try: data = request.json
     except: data = request.form
     station = data['station']
@@ -207,8 +226,11 @@ def play_station():
     socketio.emit("play",out)
     return jsonify(out)
 
+state = "stopped"
+
 @app.route('/stop',methods = ['POST', 'GET'])
 def stop():
+    global state
     try: data = request.json
     except: data = request.form
     if BACKEND == "sonos": 
@@ -217,6 +239,8 @@ def stop():
         out = {'result':'success','action':f"stopped {zone}"}    
     if BACKEND == "mpc":
         zone = "mpc"
+        state = "stopped"
+
         clear_mpc()
         stop_mpc()
         out = {'result':'success','action':f"stopped"}    
@@ -282,4 +306,19 @@ def get_volume():
 
     return jsonify(out)
 
-socketio.run(app,port=PORT,host="0.0.0.0",allow_unsafe_werkzeug=True)
+
+status = None
+
+def periodic_task():
+    global status
+    while True:
+        this_status = get_status_mpc()
+        if state != "stopped" and this_status != status: 
+            status = this_status
+            socketio.emit('status', status)
+        time.sleep(2)
+
+# Start the periodic task in a separate thread
+threading.Thread(target=periodic_task, daemon=True).start()
+if __name__ == '__main__':
+    socketio.run(app,port=PORT,host="0.0.0.0",allow_unsafe_werkzeug=True)

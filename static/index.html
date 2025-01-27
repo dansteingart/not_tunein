@@ -112,6 +112,8 @@
     socket.on('connect', function() {socket.emit('system_query', {data: 'I\'m connected!'});});
     socket.on('volume', (data)=>{dd = data['volume'];voldo(dd)});
 
+    socket.on('status', (data)=> {tracker(data)});
+
     socket.on('play', (data)=>{
         console.log(data);
         whatson = data['station']
@@ -127,7 +129,7 @@
         console.log(data);
         if (data['station']!=null) $("#station").val(data['station'])
 	    fit();
-        setInterval(function(){$.get("/mpc_status",(data)=>{tracker(data)})},5000);
+        //setInterval(function(){$.get("/mpc_status",(data)=>{tracker(data)})},5000);
     } 
     
     
@@ -239,7 +241,7 @@
 
     function tracker(data)
     {
-        console.log(data);
+        //console.log(data);
         out = ""
         if (data.hasOwnProperty("artist")) out += `${data['artist']}<br>`
         if (data.hasOwnProperty("title")) out += `${data['title']}<br>`
