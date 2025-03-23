@@ -13,9 +13,11 @@ import threading
 import time
 import sys
 from sqlite_utils import Database
+from pync import notify
 
 osa = False
 if "osa" in sys.argv: osa = True
+if "pync" in sys.argv: pync = True
 
 def setTimeout(delay):
     timer = threading.Timer(delay, stop_mpc)
@@ -29,6 +31,8 @@ if BACKEND == "sonos": from soco import SoCo, discover
 KCRW_url = "https://tracklist-api.kcrw.com/Music/"
 
 PORT = 9000
+
+BURL = "http://localhost:9000"
 
 if len(sys.argv) > 1:
     try: 
@@ -224,6 +228,7 @@ def play_station():
         else: play_mpc()
         out = {'result':'success','station':station}    
     socketio.emit("play",out)
+    if pync: notify(f"Playing {station}",title='NT')
     return jsonify(out)
 
 state = "stopped"
@@ -243,7 +248,8 @@ def stop():
 
         clear_mpc()
         stop_mpc()
-        out = {'result':'success','action':f"stopped"}    
+        out = {'result':'success','action':f"stopped"}  
+        if pync: notify("Stopped",title='NT') 
     return jsonify(out)
 
 @app.route('/sleep',methods = ['POST'])
@@ -316,6 +322,8 @@ def periodic_task():
         if state != "stopped" and this_status != status: 
             status = this_status
             socketio.emit('status', status)
+            if pync: notify(f"Playing {status['title']} by {status['artist']} on {status['station']}",title='NT',open=BURL)
+
         time.sleep(2)
 
 # Start the periodic task in a separate thread
