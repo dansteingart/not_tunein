@@ -16,6 +16,7 @@ from sqlite_utils import Database
 from pync import notify
 
 osa = False
+pync = False
 if "osa" in sys.argv: osa = True
 if "pync" in sys.argv: pync = True
 
@@ -94,20 +95,21 @@ def get_status_mpc():
         vol_mpc(sv)
     vv = go("mpc current")
     track = {}
+    track['station'] = current_station
     try:
         if vv.find("[SomaFM]") > -1:
             tracks = vv.split("[SomaFM]:")[-1]
             track['artist'] = tracks.split("-")[0].strip() 
             track['title'] = tracks.split("-")[-1].strip()
-            track['station'] = vv.split(":")[0]
+            #track['station'] = vv.split(":")[0]
         elif vv.find("Eclectic") > -1:
             track = requests.get(KCRW_url).json()
             track['station'] = "KCRW E24"
         elif vv.find("WNYC") > -1:
-            track['station'] = "WNYC"
+            #track['station'] = "WNYC"
             track['program'] = vv.split(":")[-1].strip()
         else:
-            track['station'] = vv.split(":")[0]
+            #track['station'] = vv.split(":")[0]
             tracks = vv.split(":")[-1]
             track['artist'] = tracks.split("-")[0].strip() 
             track['title'] = tracks.split("-")[-1].strip()
@@ -129,6 +131,7 @@ def get_status_mpc():
             db  = Database("tracks.db")
             db['tracks'].insert(track,pk='time')
             db.close()
+            del(track['time']) #for alert purposes.
             last_track = track
 
             if "mqtt" in sys.argv:
@@ -320,9 +323,11 @@ def periodic_task():
     while True:
         this_status = get_status_mpc()
         if state != "stopped" and this_status != status: 
+            try: this_status['time']
+            except: None
             status = this_status
             socketio.emit('status', status)
-            if pync: notify(f"Playing {status['title']} by {status['artist']} on {status['station']}",title='NT',open=BURL)
+            if pync and (status['title'] is not status['artist']): notify(f"Playing {status['title']} by {status['artist']} on {status['station']}",title='NT',open=BURL)
 
         time.sleep(2)
 
