@@ -48,6 +48,8 @@ stations = {}
 app = Flask(__name__)
 socketio = SocketIO(app)
 
+if pync: print("will let you know stuff")
+
 if "mqtt" in sys.argv:
     import paho.mqtt.client as mqtt
     print("doing mqtt stuff!")
