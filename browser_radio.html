@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Not TuneIn - Browser Radio</title>
+    <!-- 
+    Note: For best results, serve this file from a local web server:
+    
+    Python 3: python3 -m http.server 8000
+    Python 2: python -m SimpleHTTPServer 8000
+    Node.js: npx http-server
+    
+    Then access via http://localhost:8000/browser_radio.html
+    
+    Opening the file directly (file://) will use fallback stations due to CORS restrictions.
+    -->
+    <link id="favicon" href="static/favicon.ico" rel="icon" media="(prefers-color-scheme: light)">
+    <link id="favicon" href="static/favicon-dizzark.ico" rel="icon" media="(prefers-color-scheme: dark)">
+    
+    <style>
+        body {
+            font-family: Helvetica;
+            font-size: 9vw;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            margin: 20px;
+        }
+
+        .track a {
+            font-size: 6vw;
+            color: grey;
+        }
+
+        div {
+            -webkit-touch-callout: none;
+        }
+
+        select {
+            appearance: none;
+            color: lightblue;
+            background-color: white;
+            border: none;
+            outline: none;
+            padding: 0 0em 0 0;
+            margin: 0;
+            font-family: inherit;
+            font-size: inherit;
+            cursor: inherit;
+            line-height: inherit;
+        }
+
+        a {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        a:hover { filter: brightness(150%); }
+        a:active { filter: brightness(150%); }
+
+        .play { color: rgb(0,150,0); }
+        .stop { color: rgb(150,0,0); }
+        .sleep { color: rgb(210,150,0); }
+
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            background: #EFEFEF;
+            color: #222;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+        }
+
+        .hold {
+            visibility: hidden;
+            position: absolute;
+            white-space: nowrap;
+            font-family: Helvetica;
+            font-size: 9vw;
+        }
+
+        .status {
+            margin-top: 20px;
+            font-size: 5vw;
+            color: #666;
+        }
+
+        .loading {
+            color: orange;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id='thingdoer' class="main">
+        <a id="go" class="play">play</a> 
+        <select id="station"></select> or <br>
+        <a id="stop" class="stop">stop</a>  
+        <span id='sleepid'> or <br>
+            <a id="sleep" class="sleep">sleep</a> in
+            <select id="sleeps">
+                <option value='15'>15</option>
+                <option value='30'>30</option>
+                <option value='45'>45</option>
+                <option value='60'>60</option>
+            </select>
+            minutes
+        </span>
+    </div>
+    <br>
+    <a id="vdowndown"> -- </a> 
+    <a id="vdown"> - </a> 
+    <span id="svol">50</span> 
+    <a id="vup"> + </a>
+    <a id="vupup"> ++ </a>
+    <br>
+    <div class="slidecontainer">
+        <input type="range" min="0" max="100" value="50" class="slider" id="volume">
+    </div>
+
+    <div id="tracks" class="track"></div>
+    <div id="status" class="status"></div>
+    
+    <span id="holdz" class="hold"></span>
+    <span id="holds" class="hold"></span>
+    
+    <script>
+        // Station configuration - fetched from Google Sheets or fallback
+        let stations = {};
+        let currentAudio = null;
+        let currentStation = null;
+        let sleepTimer = null;
+        let invstate = localStorage.getItem('invstate') === 'true';
+        
+        // CORS proxy to access Google Sheets
+        const PROXY_URL = 'https://cors-anywhere.herokuapp.com/';
+        const STATIONS_URL = 'https://docs.google.com/spreadsheets/d/1eCQ94Ur71X0C5-EoPVfuTXJH6f3zYkt1pFmO2872eVs/export?format=tsv';
+        
+        // Fallback stations in case Google Sheets is inaccessible
+        const FALLBACK_STATIONS = {
+            'WFMU': 'https://stream0.wfmu.org/freeform-128k',
+            'KCRW Eclectic': 'https://kcrw.streamguys1.com/kcrw_192k_mp3_e24',
+            'KEXP': 'https://live-mp3-128.kexp.org/',
+            'WNYC': 'https://fm939.wnyc.org/wnycfm',
+            'SomaFM Groove Salad': 'https://ice1.somafm.com/groovesalad-128-mp3',
+            'Radio Paradise': 'https://stream.radioparadise.com/aac-320',
+            'BBC Radio 6': 'https://stream.live.vc.bbcmedia.co.uk/bbc_6music',
+            'NTS Radio 1': 'https://stream-relay-geo.ntslive.net/stream',
+            'Worldwide FM': 'https://worldwidefm.out.airtime.pro/worldwidefm_a'
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing...');
+            setupEventListeners();
+            loadStations().then(() => {
+                restoreState();
+                fit();
+            });
+            invert(invstate);
+        });
+        
+        // Load stations from Google Sheets with fallback
+        async function loadStations() {
+            console.log('Loading stations...');
+            setStatus('Loading stations...', 'loading');
+            
+            // Try to load from Google Sheets first
+            try {
+                console.log('Attempting to fetch from Google Sheets...');
+                const response = await fetch(STATIONS_URL);
+                if (response.ok) {
+                    const text = await response.text();
+                    const lines = text.split('\n');
+                    lines.shift(); // Remove header
+                    
+                    stations = {};
+                    lines.forEach(line => {
+                        if (line.trim()) {
+                            const parts = line.split('\t');
+                            if (parts.length >= 2) {
+                                const name = parts[0].trim();
+                                const url = parts[1].trim();
+                                stations[name] = url;
+                            }
+                        }
+                    });
+                    
+                    if (Object.keys(stations).length > 0) {
+                        console.log('Loaded', Object.keys(stations).length, 'stations from Google Sheets');
+                        buildStationList();
+                        setStatus('Stations loaded from Google Sheets');
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.log('Google Sheets failed:', error);
+            }
+            
+            // Fallback to hardcoded stations
+            console.log('Using fallback stations');
+            stations = {...FALLBACK_STATIONS};
+            console.log('Fallback stations:', stations);
+            buildStationList();
+            setStatus('Using fallback stations (Google Sheets unavailable)');
+        }
+        
+        // Build station dropdown list
+        function buildStationList() {
+            const stationSelect = document.getElementById('station');
+            if (!stationSelect) {
+                console.error('Station select element not found');
+                return;
+            }
+            
+            stationSelect.innerHTML = '';
+            
+            Object.keys(stations).sort().forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                stationSelect.appendChild(option);
+            });
+            
+            console.log('Built station list with', Object.keys(stations).length, 'stations');
+            fit();
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('go').addEventListener('click', playStation);
+            document.getElementById('stop').addEventListener('click', stopStation);
+            document.getElementById('sleep').addEventListener('click', setSleepTimer);
+            document.getElementById('volume').addEventListener('input', setVolume);
+            document.getElementById('station').addEventListener('change', () => {
+                fit();
+                saveState();
+                // Auto-play when station changes
+                playStation();
+            });
+            
+            // Volume controls
+            document.getElementById('vup').addEventListener('click', () => adjustVolume(1));
+            document.getElementById('vupup').addEventListener('click', () => adjustVolume(5));
+            document.getElementById('vdown').addEventListener('click', () => adjustVolume(-1));
+            document.getElementById('vdowndown').addEventListener('click', () => adjustVolume(-5));
+            
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            window.addEventListener('resize', fit);
+        }
+        
+        // Play selected station
+        function playStation() {
+            const stationSelect = document.getElementById('station');
+            const stationName = stationSelect.value;
+            
+            console.log('Playing station:', stationName, 'URL:', stations[stationName]);
+            
+            if (!stationName) {
+                setStatus('Please select a station', 'error');
+                return;
+            }
+            
+            if (!stations[stationName]) {
+                setStatus('Station URL not found: ' + stationName, 'error');
+                console.error('Available stations:', Object.keys(stations));
+                return;
+            }
+            
+            // Clean up current audio completely
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.removeAttribute('src');
+                currentAudio.load(); // Reset the audio element
+                currentAudio = null;
+            }
+            
+            const url = stations[stationName];
+            console.log('Creating audio with URL:', url);
+            
+            try {
+                currentAudio = new Audio();
+                currentStation = stationName;
+                
+                // Prevent autoplay policy issues
+                currentAudio.preload = 'none';
+                
+                setStatus('Connecting to ' + stationName + '...', 'loading');
+                
+                // Set up event listeners
+                const handleLoadStart = () => {
+                    console.log('Load started for', stationName);
+                    setStatus('Loading ' + stationName + '...', 'loading');
+                };
+                
+                const handleCanPlay = () => {
+                    console.log('Can play', stationName);
+                    setStatus('Playing ' + stationName);
+                    updateTrackDisplay(stationName);
+                };
+                
+                const handleError = (e) => {
+                    console.error('Audio error:', e, currentAudio?.error);
+                    let errorMsg = 'Stream unavailable';
+                    if (currentAudio?.error) {
+                        switch(currentAudio.error.code) {
+                            case 1: errorMsg = 'Loading aborted'; break;
+                            case 2: errorMsg = 'Network error'; break;
+                            case 3: errorMsg = 'Decode error'; break;
+                            case 4: errorMsg = 'Source not supported'; break;
+                        }
+                    }
+                    setStatus('Error playing ' + stationName + ': ' + errorMsg, 'error');
+                };
+                
+                const handleEnded = () => {
+                    setStatus('Stream ended');
+                    currentStation = null;
+                };
+                
+                currentAudio.addEventListener('loadstart', handleLoadStart);
+                currentAudio.addEventListener('canplay', handleCanPlay);
+                currentAudio.addEventListener('error', handleError);
+                currentAudio.addEventListener('ended', handleEnded);
+                
+                // Set volume before playing
+                const volume = document.getElementById('volume').value / 100;
+                currentAudio.volume = volume;
+                
+                // Set source and start playback
+                currentAudio.src = url;
+                
+                // Use a promise-based approach for better error handling
+                const playPromise = currentAudio.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Playback started successfully');
+                        })
+                        .catch(e => {
+                            console.error('Play promise rejected:', e);
+                            if (e.name === 'NotAllowedError') {
+                                setStatus('Click play again (browser autoplay policy)', 'error');
+                            } else {
+                                setStatus('Error: ' + e.message, 'error');
+                            }
+                        });
+                }
+                
+            } catch (e) {
+                console.error('Audio creation error:', e);
+                setStatus('Error creating audio player: ' + e.message, 'error');
+            }
+            
+            fit();
+        }
+        
+        // Stop current station
+        function stopStation() {
+            if (currentAudio) {
+                try {
+                    currentAudio.pause();
+                    currentAudio.removeAttribute('src');
+                    currentAudio.load(); // Reset the audio element completely
+                } catch (e) {
+                    console.log('Error stopping audio:', e);
+                }
+                currentAudio = null;
+            }
+            
+            if (sleepTimer) {
+                clearTimeout(sleepTimer);
+                sleepTimer = null;
+            }
+            
+            currentStation = null;
+            setStatus('Stopped');
+            updateTrackDisplay('');
+            fit();
+        }
+        
+        // Set sleep timer
+        function setSleepTimer() {
+            const minutes = parseInt(document.getElementById('sleeps').value);
+            const milliseconds = minutes * 60 * 1000;
+            
+            if (sleepTimer) {
+                clearTimeout(sleepTimer);
+            }
+            
+            sleepTimer = setTimeout(() => {
+                stopStation();
+                setStatus('Sleep timer expired');
+            }, milliseconds);
+            
+            setStatus('Sleep timer set for ' + minutes + ' minutes');
+        }
+        
+        // Set volume
+        function setVolume() {
+            const volumeSlider = document.getElementById('volume');
+            const volume = volumeSlider.value / 100;
+            
+            if (currentAudio && !currentAudio.error) {
+                try {
+                    currentAudio.volume = volume;
+                } catch (e) {
+                    console.log('Error setting volume:', e);
+                }
+            }
+            
+            const displayVol = volumeSlider.value;
+            const displayText = displayVol < 10 ? '0' + displayVol : displayVol;
+            document.getElementById('svol').textContent = displayText;
+            saveState();
+        }
+        
+        // Adjust volume by amount
+        function adjustVolume(amount) {
+            const volumeSlider = document.getElementById('volume');
+            const newValue = Math.max(0, Math.min(100, parseInt(volumeSlider.value) + amount));
+            volumeSlider.value = newValue;
+            setVolume();
+        }
+        
+        // Update track display
+        function updateTrackDisplay(stationName) {
+            const tracksDiv = document.getElementById('tracks');
+            if (stationName) {
+                tracksDiv.innerHTML = `<a href="#">${stationName}</a>`;
+            } else {
+                tracksDiv.innerHTML = '';
+            }
+        }
+        
+        // Set status message
+        function setStatus(message, type = '') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+        }
+        
+        // Fit selects to content
+        function fit() {
+            const station = document.getElementById('station');
+            
+            if (station && station.options.length > 0) {
+                const selectedText = station.options[station.selectedIndex]?.text || '';
+                
+                if (selectedText) {
+                    // Create a temporary element to measure text width
+                    const tempElement = document.createElement('div');
+                    tempElement.style.visibility = 'hidden';
+                    tempElement.style.position = 'absolute';
+                    tempElement.style.whiteSpace = 'nowrap';
+                    tempElement.style.fontFamily = 'Helvetica';
+                    tempElement.style.fontSize = '9vw';
+                    tempElement.textContent = selectedText;
+                    
+                    document.body.appendChild(tempElement);
+                    
+                    // Get the computed width
+                    const textWidth = tempElement.getBoundingClientRect().width;
+                    
+                    // Remove the temporary element
+                    document.body.removeChild(tempElement);
+                    
+                    // Set the select width with some padding
+                    const finalWidth = Math.max(textWidth + 40, 150);
+                    station.style.width = finalWidth + 'px';
+                    
+                    console.log('Fit:', selectedText, 'Width:', textWidth, 'Final:', finalWidth + 'px');
+                }
+            }
+        }
+        
+        // Save state to localStorage
+        function saveState() {
+            const state = {
+                station: document.getElementById('station').value,
+                volume: document.getElementById('volume').value
+            };
+            localStorage.setItem('radioState', JSON.stringify(state));
+        }
+        
+        // Restore state from localStorage
+        function restoreState() {
+            try {
+                const state = JSON.parse(localStorage.getItem('radioState'));
+                if (state) {
+                    if (state.station) {
+                        document.getElementById('station').value = state.station;
+                    }
+                    if (state.volume) {
+                        document.getElementById('volume').value = state.volume;
+                        setVolume();
+                    }
+                }
+            } catch (e) {
+                console.log('Error restoring state:', e);
+            }
+        }
+        
+        // Dark/light mode toggle
+        function invert(dark) {
+            const body = document.body;
+            const selects = document.querySelectorAll('select');
+            
+            if (dark) {
+                body.style.color = 'rgb(255,255,255)';
+                body.style.backgroundColor = 'rgb(0,0,0)';
+                selects.forEach(select => {
+                    select.style.backgroundColor = 'rgb(0,0,0)';
+                });
+            } else {
+                body.style.color = 'rgb(0,0,0)';
+                body.style.backgroundColor = 'rgb(255,255,255)';
+                selects.forEach(select => {
+                    select.style.backgroundColor = 'rgb(255,255,255)';
+                });
+            }
+            
+            localStorage.setItem('invstate', dark);
+        }
+        
+        // Keyboard handling
+        let shiftPressed = false;
+        
+        function handleKeyDown(e) {
+            if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) {
+                e.preventDefault();
+            }
+            
+            const code = e.code;
+            const factor = shiftPressed ? 1 : 5;
+            
+            if (code === "ArrowRight") {
+                adjustVolume(factor);
+            } else if (code === "ArrowLeft") {
+                adjustVolume(-factor);
+            } else if (code === "ArrowUp") {
+                navigateStation(-1);
+            } else if (code === "ArrowDown") {
+                navigateStation(1);
+            } else if (code === "Enter") {
+                if (currentAudio && !currentAudio.paused) {
+                    stopStation();
+                } else {
+                    playStation();
+                }
+            } else if (code.includes("Shift")) {
+                shiftPressed = true;
+            } else if (code === "Backslash") {
+                invstate = !invstate;
+                invert(invstate);
+            } else if (code === "KeyR") {
+                loadStations();
+            } else {
+                // Station selection by first letter
+                const letter = code.replace("Key", "").toLowerCase();
+                selectStationByLetter(letter);
+            }
+        }
+        
+        function handleKeyUp(e) {
+            if (e.code.includes("Shift")) {
+                shiftPressed = false;
+            }
+        }
+        
+        // Navigate stations with arrow keys
+        function navigateStation(direction) {
+            const stationSelect = document.getElementById('station');
+            const options = Array.from(stationSelect.options);
+            const currentIndex = options.findIndex(option => option.value === stationSelect.value);
+            const newIndex = Math.max(0, Math.min(options.length - 1, currentIndex + direction));
+            
+            if (newIndex !== currentIndex) {
+                stationSelect.value = options[newIndex].value;
+                fit();
+                saveState();
+                // Auto-play when navigating with keyboard
+                playStation();
+            }
+        }
+        
+        // Select station by first letter
+        function selectStationByLetter(letter) {
+            const stationSelect = document.getElementById('station');
+            const options = Array.from(stationSelect.options);
+            
+            const matchingOption = options.find(option => 
+                option.value.toLowerCase().startsWith(letter)
+            );
+            
+            if (matchingOption) {
+                stationSelect.value = matchingOption.value;
+                fit();
+                saveState();
+                // Auto-play when selecting by letter
+                playStation();
+            }
+        }
+    </script>
+</body>
+</html>
