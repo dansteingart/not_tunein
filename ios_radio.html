@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Not TuneIn - iOS Radio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Not TuneIn">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#000000">
+    <meta name="msapplication-navbutton-color" content="#000000">
+    <link id="favicon" href="static/favicon.ico" rel="icon" media="(prefers-color-scheme: light)">
+    <link id="favicon" href="static/favicon-dizzark.ico" rel="icon" media="(prefers-color-scheme: dark)">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            overflow-x: hidden;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: env(safe-area-inset-top) 20px 15px 20px;
+            z-index: 100;
+            border-bottom: 1px solid #333;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stop-btn {
+            background: #ff3b30;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .stop-btn:active {
+            transform: scale(0.95);
+            background: #d70015;
+        }
+
+        .stop-btn:disabled {
+            background: #444;
+            color: #888;
+            transform: none;
+        }
+
+        .status {
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
+        .status.loading {
+            color: #007aff;
+        }
+
+        .status.error {
+            color: #ff3b30;
+        }
+
+        .status.playing {
+            color: #34c759;
+        }
+
+        .container {
+            margin-top: 140px;
+            padding: 0 20px 40px 20px;
+        }
+
+        .station-list {
+            list-style: none;
+        }
+
+        .station-item {
+            background: #1c1c1e;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .station-item:active {
+            transform: scale(0.98);
+        }
+
+        .station-item.playing {
+            background: #007aff;
+            box-shadow: 0 4px 20px rgba(0, 122, 255, 0.3);
+        }
+
+        .station-item.loading {
+            background: #2c2c2e;
+        }
+
+        .station-link {
+            display: block;
+            padding: 20px;
+            color: inherit;
+            text-decoration: none;
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .station-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .station-info {
+            font-size: 14px;
+            color: #888;
+            opacity: 0.8;
+        }
+
+        .station-item.playing .station-info {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .playing-indicator {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .station-item.playing .playing-indicator {
+            display: block;
+        }
+
+        .loading-indicator {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid #444;
+            border-top: 2px solid #007aff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        .station-item.loading .loading-indicator {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        /* Hidden volume and sleep controls - keep functionality */
+        .hidden-controls {
+            display: none;
+        }
+
+        .track-display {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 15px 20px;
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            border-top: 1px solid #333;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .track-display.show {
+            transform: translateY(0);
+        }
+
+        .track-text {
+            font-size: 14px;
+            color: #888;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        @media (prefers-color-scheme: light) {
+            body {
+                background-color: #f2f2f7;
+                color: #000;
+            }
+
+            .header {
+                background: rgba(242, 242, 247, 0.95);
+                border-bottom-color: #d1d1d6;
+            }
+
+            .station-item {
+                background: #fff;
+            }
+
+            .station-item.loading {
+                background: #f2f2f7;
+            }
+
+            .station-info {
+                color: #666;
+            }
+
+            .track-display {
+                background: rgba(242, 242, 247, 0.95);
+                border-top-color: #d1d1d6;
+            }
+
+            .track-text {
+                color: #666;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Not TuneIn</h1>
+        <div class="controls">
+            <button id="stopBtn" class="stop-btn" disabled>Stop</button>
+        </div>
+        <div id="status" class="status">Loading stations...</div>
+    </div>
+
+    <div class="container">
+        <ul id="stationList" class="station-list">
+            <!-- Stations will be populated here -->
+        </ul>
+    </div>
+
+    <div id="trackDisplay" class="track-display">
+        <div id="trackText" class="track-text"></div>
+    </div>
+
+    <!-- Hidden controls for volume and sleep - keep functionality but hide -->
+    <div class="hidden-controls">
+        <input type="range" min="0" max="100" value="50" id="volume">
+        <select id="sleeps">
+            <option value='15'>15</option>
+            <option value='30'>30</option>
+            <option value='45'>45</option>
+            <option value='60'>60</option>
+        </select>
+    </div>
+
+    <script>
+        // Core functionality - same as desktop version but adapted for mobile
+        let stations = {};
+        let currentAudio = null;
+        let currentStation = null;
+        let sleepTimer = null;
+        let invstate = localStorage.getItem('invstate') === 'true';
+        
+        const STATIONS_URL = 'https://docs.google.com/spreadsheets/d/1eCQ94Ur71X0C5-EoPVfuTXJH6f3zYkt1pFmO2872eVs/export?format=tsv';
+        
+        // Fallback stations
+        const FALLBACK_STATIONS = {
+            'WFMU': 'https://stream0.wfmu.org/freeform-128k',
+            'KCRW Eclectic': 'https://kcrw.streamguys1.com/kcrw_192k_mp3_e24',
+            'KEXP': 'https://live-mp3-128.kexp.org/',
+            'WNYC': 'https://fm939.wnyc.org/wnycfm',
+            'SomaFM Groove Salad': 'https://ice1.somafm.com/groovesalad-128-mp3',
+            'Radio Paradise': 'https://stream.radioparadise.com/aac-320',
+            'BBC Radio 6': 'https://stream.live.vc.bbcmedia.co.uk/bbc_6music',
+            'NTS Radio 1': 'https://stream-relay-geo.ntslive.net/stream',
+            'Worldwide FM': 'https://worldwidefm.out.airtime.pro/worldwidefm_a'
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('iOS Radio initializing...');
+            setupEventListeners();
+            loadStations().then(() => {
+                restoreState();
+            });
+        });
+        
+        // Load stations
+        async function loadStations() {
+            console.log('Loading stations...');
+            setStatus('Loading stations...', 'loading');
+            
+            try {
+                const response = await fetch(STATIONS_URL);
+                if (response.ok) {
+                    const text = await response.text();
+                    const lines = text.split('\n');
+                    lines.shift(); // Remove header
+                    
+                    stations = {};
+                    lines.forEach(line => {
+                        if (line.trim()) {
+                            const parts = line.split('\t');
+                            if (parts.length >= 2) {
+                                const name = parts[0].trim();
+                                const url = parts[1].trim();
+                                stations[name] = url;
+                            }
+                        }
+                    });
+                    
+                    if (Object.keys(stations).length > 0) {
+                        console.log('Loaded', Object.keys(stations).length, 'stations from Google Sheets');
+                        buildStationList();
+                        setStatus('Tap a station to play');
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.log('Google Sheets failed:', error);
+            }
+            
+            // Fallback
+            console.log('Using fallback stations');
+            stations = {...FALLBACK_STATIONS};
+            buildStationList();
+            setStatus('Tap a station to play');
+        }
+        
+        // Build station list
+        function buildStationList() {
+            const stationList = document.getElementById('stationList');
+            stationList.innerHTML = '';
+            
+            Object.keys(stations).sort().forEach(name => {
+                const li = document.createElement('li');
+                li.className = 'station-item';
+                li.dataset.station = name;
+                
+                li.innerHTML = `
+                    <a href="#" class="station-link">
+                        <div class="station-name">${name}</div>
+                        <div class="station-info">Tap to play</div>
+                        <div class="playing-indicator">♪ PLAYING</div>
+                        <div class="loading-indicator"></div>
+                    </a>
+                `;
+                
+                li.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    playStation(name, li);
+                });
+                
+                stationList.appendChild(li);
+            });
+        }
+        
+        // Play station
+        function playStation(stationName, stationElement) {
+            console.log('Playing station:', stationName);
+            
+            if (!stations[stationName]) {
+                setStatus('Station not found', 'error');
+                return;
+            }
+            
+            // Reset all station items
+            document.querySelectorAll('.station-item').forEach(item => {
+                item.classList.remove('playing', 'loading');
+            });
+            
+            // Mark current station as loading
+            stationElement.classList.add('loading');
+            
+            // Clean up current audio
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.removeAttribute('src');
+                currentAudio.load();
+                currentAudio = null;
+            }
+            
+            const url = stations[stationName];
+            
+            try {
+                currentAudio = new Audio();
+                currentStation = stationName;
+                currentAudio.preload = 'none';
+                
+                setStatus('Connecting to ' + stationName + '...', 'loading');
+                
+                currentAudio.addEventListener('loadstart', () => {
+                    setStatus('Loading ' + stationName + '...', 'loading');
+                });
+                
+                currentAudio.addEventListener('canplay', () => {
+                    stationElement.classList.remove('loading');
+                    stationElement.classList.add('playing');
+                    setStatus('Playing ' + stationName, 'playing');
+                    updateTrackDisplay(stationName);
+                    document.getElementById('stopBtn').disabled = false;
+                });
+                
+                currentAudio.addEventListener('error', (e) => {
+                    stationElement.classList.remove('loading');
+                    let errorMsg = 'Stream unavailable';
+                    if (currentAudio?.error) {
+                        switch(currentAudio.error.code) {
+                            case 1: errorMsg = 'Loading aborted'; break;
+                            case 2: errorMsg = 'Network error'; break;
+                            case 3: errorMsg = 'Decode error'; break;
+                            case 4: errorMsg = 'Source not supported'; break;
+                        }
+                    }
+                    setStatus('Error: ' + errorMsg, 'error');
+                });
+                
+                currentAudio.addEventListener('ended', () => {
+                    stopStation();
+                });
+                
+                // Set volume from hidden control
+                const volume = document.getElementById('volume').value / 100;
+                currentAudio.volume = volume;
+                
+                currentAudio.src = url;
+                
+                const playPromise = currentAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            console.log('Playback started successfully');
+                        })
+                        .catch(e => {
+                            stationElement.classList.remove('loading');
+                            if (e.name === 'NotAllowedError') {
+                                setStatus('Tap again (browser autoplay policy)', 'error');
+                            } else {
+                                setStatus('Error: ' + e.message, 'error');
+                            }
+                        });
+                }
+                
+            } catch (e) {
+                stationElement.classList.remove('loading');
+                setStatus('Error creating audio player', 'error');
+            }
+            
+            saveState();
+        }
+        
+        // Stop station
+        function stopStation() {
+            if (currentAudio) {
+                try {
+                    currentAudio.pause();
+                    currentAudio.removeAttribute('src');
+                    currentAudio.load();
+                } catch (e) {
+                    console.log('Error stopping audio:', e);
+                }
+                currentAudio = null;
+            }
+            
+            if (sleepTimer) {
+                clearTimeout(sleepTimer);
+                sleepTimer = null;
+            }
+            
+            // Reset all station items
+            document.querySelectorAll('.station-item').forEach(item => {
+                item.classList.remove('playing', 'loading');
+            });
+            
+            currentStation = null;
+            setStatus('Stopped');
+            updateTrackDisplay('');
+            document.getElementById('stopBtn').disabled = true;
+        }
+        
+        // Set status
+        function setStatus(message, type = '') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+        }
+        
+        // Update track display
+        function updateTrackDisplay(stationName) {
+            const trackDisplay = document.getElementById('trackDisplay');
+            const trackText = document.getElementById('trackText');
+            
+            if (stationName) {
+                trackText.textContent = '♪ ' + stationName;
+                trackDisplay.classList.add('show');
+            } else {
+                trackDisplay.classList.remove('show');
+            }
+        }
+        
+        // Event listeners
+        function setupEventListeners() {
+            document.getElementById('stopBtn').addEventListener('click', stopStation);
+            
+            // Hidden volume control still works
+            document.getElementById('volume').addEventListener('input', () => {
+                if (currentAudio && !currentAudio.error) {
+                    try {
+                        currentAudio.volume = document.getElementById('volume').value / 100;
+                    } catch (e) {
+                        console.log('Error setting volume:', e);
+                    }
+                }
+                saveState();
+            });
+        }
+        
+        // State management
+        function saveState() {
+            const state = {
+                station: currentStation,
+                volume: document.getElementById('volume').value
+            };
+            localStorage.setItem('iosRadioState', JSON.stringify(state));
+        }
+        
+        function restoreState() {
+            try {
+                const state = JSON.parse(localStorage.getItem('iosRadioState'));
+                if (state && state.volume) {
+                    document.getElementById('volume').value = state.volume;
+                }
+            } catch (e) {
+                console.log('Error restoring state:', e);
+            }
+        }
+        
+        // Sleep timer function (hidden but functional)
+        function setSleepTimer(minutes) {
+            const milliseconds = minutes * 60 * 1000;
+            
+            if (sleepTimer) {
+                clearTimeout(sleepTimer);
+            }
+            
+            sleepTimer = setTimeout(() => {
+                stopStation();
+                setStatus('Sleep timer expired');
+            }, milliseconds);
+            
+            setStatus('Sleep timer set for ' + minutes + ' minutes');
+        }
+    </script>
+</body>
+</html>
