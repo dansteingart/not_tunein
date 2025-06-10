@@ -30,6 +30,8 @@
             overflow-x: hidden;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
+            font-weight: 400;
+            letter-spacing: -0.01em;
         }
 
         .header {
@@ -37,12 +39,12 @@
             top: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: env(safe-area-inset-top) 20px 20px 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.5) 100%);
+            backdrop-filter: blur(30px) saturate(1.8);
+            -webkit-backdrop-filter: blur(30px) saturate(1.8);
+            padding: env(safe-area-inset-top) 20px 0 20px;
             z-index: 100;
-            transition: all 0.5s ease;
+            transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         .header.playing {
@@ -50,36 +52,35 @@
         }
 
         .now-playing {
-            background: rgba(0,0,0,0.6);
-            border-radius: 16px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: none;
+            padding: 12px 20px;
             transition: all 0.5s ease;
-            transform: scale(0.95);
+            transform: translateY(-20px);
             opacity: 0;
             pointer-events: none;
+            display: none;
         }
 
         .now-playing.show {
-            transform: scale(1);
+            transform: translateY(0);
             opacity: 1;
             pointer-events: auto;
+            display: block;
         }
 
         .now-playing-header {
             display: flex;
             align-items: center;
-            margin-bottom: 16px;
+            justify-content: space-between;
+            margin-bottom: 0;
+            min-height: 44px;
         }
 
         .album-art {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
+            width: 44px;
+            height: 44px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-right: 16px;
+            margin-right: 12px;
             position: relative;
             overflow: hidden;
             transition: all 0.5s ease;
@@ -89,7 +90,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 12px;
         }
 
         .album-art .placeholder {
@@ -98,77 +98,91 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 18px;
             color: rgba(255,255,255,0.8);
         }
 
         .track-info {
             flex: 1;
             min-width: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .station-name-playing {
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 15px;
+            font-weight: 600;
             color: #fff;
-            margin-bottom: 4px;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            margin-bottom: 1px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.01em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .track-details {
-            font-size: 14px;
-            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            color: rgba(255,255,255,0.85);
             line-height: 1.3;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            letter-spacing: -0.005em;
         }
 
         .artist-name {
             font-weight: 600;
-            margin-bottom: 2px;
+            margin-bottom: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .song-title {
             font-weight: 400;
             opacity: 0.9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .controls {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 20px;
-            margin-top: 16px;
+            flex-shrink: 0;
+            margin-left: 12px;
         }
 
         .stop-btn {
-            background: rgba(255, 59, 48, 0.9);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 18px;
-            font-weight: 600;
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff453a;
+            border: 1px solid rgba(255, 69, 58, 0.6);
+            width: 56px;
+            height: 28px;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             -webkit-tap-highlight-color: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 2px solid rgba(255,255,255,0.2);
+            letter-spacing: 0.01em;
         }
 
         .stop-btn:active {
-            transform: scale(0.9);
-            background: rgba(215, 0, 21, 0.9);
+            background: rgba(255, 59, 48, 0.25);
+            transform: scale(0.96);
+            border-color: rgba(255, 69, 58, 0.8);
         }
 
         .stop-btn:disabled {
-            background: rgba(68, 68, 68, 0.6);
+            background: none;
             color: rgba(136, 136, 136, 0.8);
-            transform: none;
+            border-color: rgba(136, 136, 136, 0.8);
         }
 
         .status {
@@ -178,6 +192,15 @@
             margin-top: 12px;
             min-height: 20px;
             text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            transition: opacity 0.3s ease;
+        }
+
+        .header.playing .status {
+            opacity: 0;
+        }
+
+        .header:not(.playing) .status {
+            display: none;
         }
 
         .status.loading {
@@ -216,13 +239,13 @@
         }
 
         .container {
-            margin-top: 200px;
-            padding: 0 20px 40px 20px;
+            margin-top: 0;
+            padding: 0;
             transition: margin-top 0.5s ease;
         }
 
         .container.playing {
-            margin-top: 260px;
+            margin-top: 100px;
         }
 
         .station-list {
@@ -230,11 +253,13 @@
         }
 
         .station-item {
-            background: #1c1c1e;
-            border-radius: 12px;
-            margin-bottom: 12px;
+            background: rgba(28, 28, 30, 0.6);
+            margin-bottom: 0;
             overflow: hidden;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-bottom: 0.5px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px) saturate(1.5);
+            -webkit-backdrop-filter: blur(20px) saturate(1.5);
         }
 
         .station-item:active {
@@ -242,8 +267,9 @@
         }
 
         .station-item.playing {
-            background: #007aff;
-            box-shadow: 0 4px 20px rgba(0, 122, 255, 0.3);
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.8) 0%, rgba(52, 120, 246, 0.9) 100%);
+            box-shadow: 0 8px 32px rgba(0, 122, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            border-bottom-color: rgba(255,255,255,0.2);
         }
 
         .station-item.loading {
@@ -252,7 +278,7 @@
 
         .station-link {
             display: block;
-            padding: 20px;
+            padding: 18px 20px;
             color: inherit;
             text-decoration: none;
             position: relative;
@@ -260,9 +286,11 @@
         }
 
         .station-name {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 4px;
+            font-size: 17px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
         }
 
         .station-info {
@@ -282,9 +310,9 @@
             transform: translateY(-50%);
             font-size: 12px;
             font-weight: 600;
-            background: rgba(255, 255, 255, 0.2);
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.5);
             padding: 4px 8px;
-            border-radius: 8px;
             display: none;
         }
 
@@ -358,7 +386,8 @@
             }
 
             .station-item {
-                background: #fff;
+                background: rgba(255, 255, 255, 0.8);
+                border-bottom-color: rgba(0,0,0,0.1);
             }
 
             .station-item.loading {
@@ -396,12 +425,12 @@
                         <div class="song-title" id="songTitle"></div>
                     </div>
                 </div>
-            </div>
-            <div class="controls">
-                <button id="stopBtn" class="stop-btn" disabled>⏹</button>
+                <div class="controls">
+                    <button id="stopBtn" class="stop-btn" disabled>stop</button>
+                </div>
             </div>
         </div>
-        <div id="status" class="status">Loading stations...</div>
+        <div id="status" class="status"></div>
     </div>
 
     <div class="container">
@@ -491,7 +520,6 @@
                     if (Object.keys(stations).length > 0) {
                         console.log('Loaded', Object.keys(stations).length, 'stations from Google Sheets');
                         buildStationList();
-                        setStatus('Tap a station to play');
                         return;
                     }
                 }
@@ -503,7 +531,6 @@
             console.log('Using fallback stations');
             stations = {...FALLBACK_STATIONS};
             buildStationList();
-            setStatus('Tap a station to play');
         }
         
         // Build station list
@@ -519,7 +546,6 @@
                 li.innerHTML = `
                     <a href="#" class="station-link">
                         <div class="station-name">${name}</div>
-                        <div class="station-info">Tap to play</div>
                         <div class="playing-indicator">♪ PLAYING</div>
                         <div class="loading-indicator"></div>
                     </a>
@@ -587,7 +613,7 @@
                             console.log('Icecast player started');
                             stationElement.classList.remove('loading');
                             stationElement.classList.add('playing');
-                            setStatus('Playing ' + stationName, 'playing');
+                            setStatus(stationName, 'playing');
                             showNowPlaying(stationName);
                             document.getElementById('stopBtn').disabled = false;
                         },
@@ -674,7 +700,6 @@
             
             currentStation = null;
             currentTrackInfo = {};
-            setStatus('Tap a station to play');
             hideNowPlaying();
             document.getElementById('stopBtn').disabled = true;
         }
@@ -1028,35 +1053,50 @@
             }
         }
         
-        // Generate dynamic colors based on text
+        // Generate dynamic colors based on text (Radium-inspired)
         function generateDynamicColors(text) {
             let hash = 0;
             for (let i = 0; i < text.length; i++) {
                 const char = text.charCodeAt(i);
                 hash = ((hash << 5) - hash) + char;
-                hash = hash & hash; // Convert to 32-bit integer
+                hash = hash & hash;
             }
             
+            // More sophisticated color generation with genre-inspired palettes
             const hue1 = Math.abs(hash) % 360;
-            const hue2 = (hue1 + 60) % 360;
+            const hue2 = (hue1 + 45) % 360;
+            const hue3 = (hue1 + 90) % 360;
+            
+            // Create more nuanced, harmonious colors
+            const saturation = 45 + (Math.abs(hash) % 30); // 45-75%
+            const lightness1 = 35 + (Math.abs(hash >> 8) % 25); // 35-60%
+            const lightness2 = 25 + (Math.abs(hash >> 16) % 20); // 25-45%
             
             return {
-                primary: `hsl(${hue1}, 70%, 50%)`,
-                secondary: `hsl(${hue2}, 60%, 40%)`,
-                background: `hsl(${hue1}, 30%, 20%)`
+                primary: `hsl(${hue1}, ${saturation}%, ${lightness1}%)`,
+                secondary: `hsl(${hue2}, ${saturation - 10}%, ${lightness2}%)`,
+                tertiary: `hsl(${hue3}, ${saturation - 20}%, ${lightness2 - 5}%)`,
+                background: `hsl(${hue1}, ${Math.min(saturation, 25)}%, 15%)`
             };
         }
         
-        // Set dynamic background
+        // Set dynamic background (Radium-inspired with multiple layers)
         function setDynamicBackground(colors) {
             const bg = document.getElementById('dynamicBg');
             
             console.log('Setting background with colors:', colors);
-            bg.style.background = `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 50%, ${colors.background} 100%)`;
             
-            // Update CSS custom property for header
+            // Create a more sophisticated multi-layer gradient
+            bg.style.background = `
+                radial-gradient(ellipse at top left, ${colors.primary}22 0%, transparent 50%),
+                radial-gradient(ellipse at top right, ${colors.secondary}18 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, ${colors.tertiary}15 0%, transparent 70%),
+                linear-gradient(135deg, ${colors.background} 0%, ${colors.secondary}11 50%, ${colors.primary}08 100%)
+            `;
+            
+            // Update CSS custom property for header with more sophistication
             const rgbValues = hslToRgb(colors.background);
-            document.documentElement.style.setProperty('--dynamic-bg', `rgba(${rgbValues}, 0.9)`);
+            document.documentElement.style.setProperty('--dynamic-bg', `rgba(${rgbValues}, 0.92)`);
             
             console.log('Background updated successfully');
         }
@@ -1064,7 +1104,11 @@
         // Reset dynamic background
         function resetDynamicBackground() {
             const bg = document.getElementById('dynamicBg');
-            bg.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+            bg.style.background = `
+                radial-gradient(ellipse at top left, rgba(30, 60, 114, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(42, 82, 152, 0.12) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)
+            `;
             document.documentElement.style.removeProperty('--dynamic-bg');
         }
         
@@ -1128,7 +1172,7 @@
                 currentAudio.addEventListener('canplay', () => {
                     stationElement.classList.remove('loading');
                     stationElement.classList.add('playing');
-                    setStatus('Playing ' + stationName, 'playing');
+                    setStatus(stationName, 'playing');
                     showNowPlaying(stationName);
                     document.getElementById('stopBtn').disabled = false;
                     // Try station-specific APIs for metadata
