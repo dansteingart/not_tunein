@@ -425,6 +425,9 @@
         </select>
     </div>
 
+    <!-- Icecast Metadata JS for ICY metadata extraction -->
+    <script src="https://cdn.jsdelivr.net/npm/icecast-metadata-js@1.18.5/dist/icecast-metadata-player.min.js"></script>
+    
     <script>
         // Core functionality - adapted for Radium-style interface
         let stations = {};
@@ -434,7 +437,7 @@
         let invstate = localStorage.getItem('invstate') === 'true';
         let metadataInterval = null;
         let currentTrackInfo = {};
-        let icyMetadataReader = null;
+        let icecastPlayer = null;
         let streamMetadataSupported = false;
         
         const STATIONS_URL = 'https://docs.google.com/spreadsheets/d/1eCQ94Ur71X0C5-EoPVfuTXJH6f3zYkt1pFmO2872eVs/export?format=tsv';
@@ -559,63 +562,65 @@
             const url = stations[stationName];
             
             try {
-                currentAudio = new Audio();
                 currentStation = stationName;
-                currentAudio.preload = 'none';
-                
                 setStatus('Connecting to ' + stationName + '...', 'loading');
                 
-                currentAudio.addEventListener('loadstart', () => {
-                    setStatus('Loading ' + stationName + '...', 'loading');
-                });
-                
-                currentAudio.addEventListener('canplay', () => {
-                    stationElement.classList.remove('loading');
-                    stationElement.classList.add('playing');
-                    setStatus('Playing ' + stationName, 'playing');
-                    showNowPlaying(stationName);
-                    document.getElementById('stopBtn').disabled = false;
-                    startMetadataFetching(stationName);
-                });
-                
-                currentAudio.addEventListener('error', (e) => {
-                    stationElement.classList.remove('loading');
-                    let errorMsg = 'Stream unavailable';
-                    if (currentAudio?.error) {
-                        switch(currentAudio.error.code) {
-                            case 1: errorMsg = 'Loading aborted'; break;
-                            case 2: errorMsg = 'Network error'; break;
-                            case 3: errorMsg = 'Decode error'; break;
-                            case 4: errorMsg = 'Source not supported'; break;
-                        }
-                    }
-                    setStatus('Error: ' + errorMsg, 'error');
-                });
-                
-                currentAudio.addEventListener('ended', () => {
-                    stopStation();
-                });
-                
-                // Set volume from hidden control
-                const volume = document.getElementById('volume').value / 100;
-                currentAudio.volume = volume;
-                
-                currentAudio.src = url;
-                
-                const playPromise = currentAudio.play();
-                if (playPromise !== undefined) {
-                    playPromise
-                        .then(() => {
-                            console.log('Playback started successfully');
-                        })
-                        .catch(e => {
-                            stationElement.classList.remove('loading');
-                            if (e.name === 'NotAllowedError') {
-                                setStatus('Tap again (browser autoplay policy)', 'error');
-                            } else {
-                                setStatus('Error: ' + e.message, 'error');
+                // Create Icecast Metadata Player for ICY metadata extraction
+                if (typeof IcecastMetadataPlayer !== 'undefined') {
+                    console.log('Creating IcecastMetadataPlayer for:', url);
+                    
+                    icecastPlayer = new IcecastMetadataPlayer(url, {
+                        onMetadata: (metadata) => {
+                            console.log('ICY Metadata received:', metadata);
+                            const parsedMetadata = parseIcecastMetadata(metadata, stationName);
+                            if (parsedMetadata) {
+                                streamMetadataSupported = true;
+                                updateStreamMetadata(parsedMetadata);
                             }
-                        });
+                        },
+                        onError: (error) => {
+                            console.log('Icecast player error:', error);
+                            // Continue with regular audio as fallback
+                            setupFallbackAudio(url, stationName, stationElement);
+                        },
+                        onPlay: () => {
+                            console.log('Icecast player started');
+                            stationElement.classList.remove('loading');
+                            stationElement.classList.add('playing');
+                            setStatus('Playing ' + stationName, 'playing');
+                            showNowPlaying(stationName);
+                            document.getElementById('stopBtn').disabled = false;
+                        },
+                        onStop: () => {
+                            console.log('Icecast player stopped');
+                        },
+                        onStreamStart: () => {
+                            console.log('Stream started');
+                            setStatus('Loading ' + stationName + '...', 'loading');
+                        },
+                        enableLogging: true,
+                        metadataTypes: ["icy", "ogg"]
+                    });
+                    
+                    // Set volume
+                    const volume = document.getElementById('volume').value / 100;
+                    icecastPlayer.audioElement.volume = volume;
+                    currentAudio = icecastPlayer.audioElement;
+                    
+                    // Start playback
+                    icecastPlayer.play().catch(e => {
+                        console.log('Icecast play failed, using fallback:', e);
+                        stationElement.classList.remove('loading');
+                        if (e.name === 'NotAllowedError') {
+                            setStatus('Tap again (browser autoplay policy)', 'error');
+                        } else {
+                            setupFallbackAudio(url, stationName, stationElement);
+                        }
+                    });
+                    
+                } else {
+                    console.log('IcecastMetadataPlayer not available, using fallback audio');
+                    setupFallbackAudio(url, stationName, stationElement);
                 }
                 
             } catch (e) {
@@ -628,6 +633,17 @@
         
         // Stop station
         function stopStation() {
+            // Stop icecast player if it exists
+            if (icecastPlayer) {
+                try {
+                    icecastPlayer.stop();
+                    icecastPlayer = null;
+                } catch (e) {
+                    console.log('Error stopping icecast player:', e);
+                }
+            }
+            
+            // Stop regular audio if it exists
             if (currentAudio) {
                 try {
                     currentAudio.pause();
@@ -648,6 +664,8 @@
                 clearInterval(metadataInterval);
                 metadataInterval = null;
             }
+            
+            streamMetadataSupported = false;
             
             // Reset all station items
             document.querySelectorAll('.station-item').forEach(item => {
@@ -703,29 +721,87 @@
             resetDynamicBackground();
         }
         
-        // Start metadata fetching
+        // Start metadata fetching (fallback for when ICY metadata isn't available)
         function startMetadataFetching(stationName) {
             // Clear any existing interval
             if (metadataInterval) {
                 clearInterval(metadataInterval);
             }
             
-            // Try to get ICY metadata from stream first
-            if (currentAudio) {
-                setupStreamMetadataReader(currentAudio, stationName);
-            }
-            
-            // Fetch metadata immediately (with slight delay to let UI settle)
+            // Try station-specific APIs immediately
             setTimeout(() => {
-                fetchMetadata(stationName);
-            }, 500);
+                tryStationSpecificAPI(stationName);
+            }, 1000);
             
-            // Then every 15 seconds for updates (fallback for streams without ICY)
+            // Then periodically for updates
             metadataInterval = setInterval(() => {
-                if (!streamMetadataSupported) {
-                    fetchMetadata(stationName);
+                tryStationSpecificAPI(stationName);
+            }, 30000); // Check every 30 seconds
+        }
+        
+        // Try station-specific APIs when ICY metadata isn't available
+        async function tryStationSpecificAPI(stationName) {
+            console.log('Trying station-specific API for:', stationName);
+            
+            let metadata = null;
+            
+            try {
+                // SomaFM
+                if (stationName.toLowerCase().includes('soma')) {
+                    metadata = await fetchSomaFMMetadata(stationName);
                 }
-            }, 15000);
+                // KCRW
+                else if (stationName.toLowerCase().includes('kcrw')) {
+                    metadata = await fetchKCRWMetadata();
+                }
+                // KEXP
+                else if (stationName.toLowerCase().includes('kexp')) {
+                    metadata = await fetchKEXPMetadata();
+                }
+                
+                if (metadata) {
+                    console.log('Got metadata from station API:', metadata);
+                    updateStreamMetadata(metadata);
+                }
+                
+            } catch (error) {
+                console.log('Station API failed:', error);
+            }
+        }
+        
+        // Enhanced SomaFM metadata fetching
+        async function fetchSomaFMMetadata(stationName) {
+            try {
+                // Map station names to SomaFM channel IDs
+                let channel = 'groovesalad'; // default
+                
+                const lowerName = stationName.toLowerCase();
+                if (lowerName.includes('groove')) channel = 'groovesalad';
+                else if (lowerName.includes('drone')) channel = 'dronezone';
+                else if (lowerName.includes('beat')) channel = 'beatblender';
+                else if (lowerName.includes('indie')) channel = 'indiepop';
+                else if (lowerName.includes('space')) channel = 'spacestation';
+                else if (lowerName.includes('dub')) channel = 'dubstep';
+                
+                console.log('Fetching SomaFM metadata for channel:', channel);
+                
+                const response = await fetch(`https://somafm.com/songs/${channel}.json`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.songs && data.songs.length > 0) {
+                        const current = data.songs[0];
+                        return {
+                            artist: current.artist,
+                            title: current.title,
+                            album: current.album || 'SomaFM',
+                            source: 'SomaFM API'
+                        };
+                    }
+                }
+            } catch (error) {
+                console.log('SomaFM API failed:', error);
+            }
+            return null;
         }
         
         // Fetch metadata for different stations
@@ -1035,6 +1111,132 @@
             }
             
             return `${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}`;
+        }
+        
+        // Setup fallback audio player (when icecast player fails)
+        function setupFallbackAudio(url, stationName, stationElement) {
+            console.log('Setting up fallback audio for:', stationName);
+            
+            try {
+                currentAudio = new Audio();
+                currentAudio.preload = 'none';
+                
+                currentAudio.addEventListener('loadstart', () => {
+                    setStatus('Loading ' + stationName + '...', 'loading');
+                });
+                
+                currentAudio.addEventListener('canplay', () => {
+                    stationElement.classList.remove('loading');
+                    stationElement.classList.add('playing');
+                    setStatus('Playing ' + stationName, 'playing');
+                    showNowPlaying(stationName);
+                    document.getElementById('stopBtn').disabled = false;
+                    // Try station-specific APIs for metadata
+                    startMetadataFetching(stationName);
+                });
+                
+                currentAudio.addEventListener('error', (e) => {
+                    stationElement.classList.remove('loading');
+                    setStatus('Error: Stream unavailable', 'error');
+                });
+                
+                currentAudio.addEventListener('ended', () => {
+                    stopStation();
+                });
+                
+                // Set volume
+                const volume = document.getElementById('volume').value / 100;
+                currentAudio.volume = volume;
+                
+                currentAudio.src = url;
+                currentAudio.play().catch(e => {
+                    stationElement.classList.remove('loading');
+                    if (e.name === 'NotAllowedError') {
+                        setStatus('Tap again (browser autoplay policy)', 'error');
+                    } else {
+                        setStatus('Error: ' + e.message, 'error');
+                    }
+                });
+                
+            } catch (e) {
+                stationElement.classList.remove('loading');
+                setStatus('Error creating fallback audio', 'error');
+            }
+        }
+        
+        // Parse ICY metadata from icecast-metadata-js
+        function parseIcecastMetadata(metadata, stationName) {
+            console.log('Parsing Icecast metadata:', metadata);
+            
+            // metadata object from icecast-metadata-js contains:
+            // { icy: { StreamTitle: "Artist - Title", StreamUrl: "..." } }
+            
+            let artist = '';
+            let title = '';
+            let album = 'Internet Radio';
+            
+            const streamTitle = metadata.icy?.StreamTitle || metadata.StreamTitle || '';
+            
+            if (streamTitle) {
+                // Parse using the same MPD-style patterns from Python code
+                
+                // SomaFM pattern: "[SomaFM]: Artist - Title"
+                if (streamTitle.includes('[SomaFM]')) {
+                    const parts = streamTitle.split('[SomaFM]:')[1];
+                    if (parts && parts.includes(' - ')) {
+                        const trackParts = parts.split(' - ');
+                        artist = trackParts[0].trim();
+                        title = trackParts.slice(1).join(' - ').trim();
+                        album = 'SomaFM';
+                    }
+                }
+                // WNYC pattern: "Program: Title"
+                else if (stationName.toLowerCase().includes('wnyc') && streamTitle.includes(':')) {
+                    title = streamTitle.split(':').pop().trim();
+                    artist = stationName;
+                }
+                // Generic "Artist - Title" pattern (most common)
+                else if (streamTitle.includes(' - ')) {
+                    const parts = streamTitle.split(' - ');
+                    artist = parts[0].trim();
+                    title = parts.slice(1).join(' - ').trim();
+                }
+                // Just title (fallback)
+                else {
+                    artist = stationName;
+                    title = streamTitle.trim();
+                }
+                
+                // Return parsed metadata
+                if (artist && title) {
+                    return {
+                        artist: artist,
+                        title: title,
+                        album: album,
+                        source: 'ICY Metadata'
+                    };
+                }
+            }
+            
+            return null;
+        }
+        
+        // Update UI with stream metadata
+        function updateStreamMetadata(metadata) {
+            console.log('Updating with stream metadata:', metadata);
+            
+            if (metadata && (metadata.artist !== currentTrackInfo.artist || metadata.title !== currentTrackInfo.title)) {
+                currentTrackInfo = metadata;
+                updateTrackInfo(metadata);
+                
+                // Fetch album art for real tracks (not just station names)
+                if (metadata.artist && metadata.title && 
+                    metadata.artist !== currentStation && 
+                    metadata.title !== 'Live Radio' &&
+                    metadata.source !== 'Station Info') {
+                    fetchAlbumArt(metadata.artist, metadata.title);
+                }
+            }
         }
         
         // Event listeners
