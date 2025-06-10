@@ -37,19 +37,99 @@
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.95);
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            padding: env(safe-area-inset-top) 20px 15px 20px;
+            padding: env(safe-area-inset-top) 20px 20px 20px;
             z-index: 100;
-            border-bottom: 1px solid #333;
+            transition: all 0.5s ease;
         }
 
-        .header h1 {
+        .header.playing {
+            background: linear-gradient(180deg, var(--dynamic-bg, rgba(0,0,0,0.9)) 0%, rgba(0,0,0,0.7) 100%);
+        }
+
+        .now-playing {
+            background: rgba(0,0,0,0.6);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.5s ease;
+            transform: scale(0.95);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .now-playing.show {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .now-playing-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .album-art {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-right: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .album-art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .album-art .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 24px;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .track-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .station-name-playing {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 4px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .track-details {
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.3;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .artist-name {
             font-weight: 600;
-            text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 2px;
+        }
+
+        .song-title {
+            font-weight: 400;
+            opacity: 0.9;
         }
 
         .controls {
@@ -57,55 +137,92 @@
             justify-content: center;
             align-items: center;
             gap: 20px;
+            margin-top: 16px;
         }
 
         .stop-btn {
-            background: #ff3b30;
+            background: rgba(255, 59, 48, 0.9);
             color: white;
             border: none;
-            border-radius: 25px;
-            padding: 12px 30px;
-            font-size: 16px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 18px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             -webkit-tap-highlight-color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
         }
 
         .stop-btn:active {
-            transform: scale(0.95);
-            background: #d70015;
+            transform: scale(0.9);
+            background: rgba(215, 0, 21, 0.9);
         }
 
         .stop-btn:disabled {
-            background: #444;
-            color: #888;
+            background: rgba(68, 68, 68, 0.6);
+            color: rgba(136, 136, 136, 0.8);
             transform: none;
         }
 
         .status {
             font-size: 14px;
-            color: #888;
+            color: rgba(255,255,255,0.7);
             text-align: center;
-            margin-top: 8px;
+            margin-top: 12px;
             min-height: 20px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
 
         .status.loading {
-            color: #007aff;
+            color: #64d2ff;
         }
 
         .status.error {
-            color: #ff3b30;
+            color: #ff6b6b;
         }
 
         .status.playing {
-            color: #34c759;
+            color: #51cf66;
+        }
+
+        .dynamic-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            transition: all 1s ease;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            opacity: 0.8;
+        }
+
+        .dynamic-background::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(255,255,255,0.05) 0%, transparent 50%);
         }
 
         .container {
-            margin-top: 140px;
+            margin-top: 200px;
             padding: 0 20px 40px 20px;
+            transition: margin-top 0.5s ease;
+        }
+
+        .container.playing {
+            margin-top: 260px;
         }
 
         .station-list {
@@ -264,10 +381,25 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Not TuneIn</h1>
-        <div class="controls">
-            <button id="stopBtn" class="stop-btn" disabled>Stop</button>
+    <div class="dynamic-background" id="dynamicBg"></div>
+    
+    <div class="header" id="header">
+        <div class="now-playing" id="nowPlaying">
+            <div class="now-playing-header">
+                <div class="album-art" id="albumArt">
+                    <div class="placeholder">♪</div>
+                </div>
+                <div class="track-info">
+                    <div class="station-name-playing" id="stationNamePlaying"></div>
+                    <div class="track-details">
+                        <div class="artist-name" id="artistName"></div>
+                        <div class="song-title" id="songTitle"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="stopBtn" class="stop-btn" disabled>⏹</button>
+            </div>
         </div>
         <div id="status" class="status">Loading stations...</div>
     </div>
@@ -294,12 +426,16 @@
     </div>
 
     <script>
-        // Core functionality - same as desktop version but adapted for mobile
+        // Core functionality - adapted for Radium-style interface
         let stations = {};
         let currentAudio = null;
         let currentStation = null;
         let sleepTimer = null;
         let invstate = localStorage.getItem('invstate') === 'true';
+        let metadataInterval = null;
+        let currentTrackInfo = {};
+        let icyMetadataReader = null;
+        let streamMetadataSupported = false;
         
         const STATIONS_URL = 'https://docs.google.com/spreadsheets/d/1eCQ94Ur71X0C5-EoPVfuTXJH6f3zYkt1pFmO2872eVs/export?format=tsv';
         
@@ -437,8 +573,9 @@
                     stationElement.classList.remove('loading');
                     stationElement.classList.add('playing');
                     setStatus('Playing ' + stationName, 'playing');
-                    updateTrackDisplay(stationName);
+                    showNowPlaying(stationName);
                     document.getElementById('stopBtn').disabled = false;
+                    startMetadataFetching(stationName);
                 });
                 
                 currentAudio.addEventListener('error', (e) => {
@@ -507,14 +644,20 @@
                 sleepTimer = null;
             }
             
+            if (metadataInterval) {
+                clearInterval(metadataInterval);
+                metadataInterval = null;
+            }
+            
             // Reset all station items
             document.querySelectorAll('.station-item').forEach(item => {
                 item.classList.remove('playing', 'loading');
             });
             
             currentStation = null;
-            setStatus('Stopped');
-            updateTrackDisplay('');
+            currentTrackInfo = {};
+            setStatus('Tap a station to play');
+            hideNowPlaying();
             document.getElementById('stopBtn').disabled = true;
         }
         
@@ -525,17 +668,373 @@
             statusDiv.className = 'status ' + type;
         }
         
-        // Update track display
-        function updateTrackDisplay(stationName) {
-            const trackDisplay = document.getElementById('trackDisplay');
-            const trackText = document.getElementById('trackText');
+        // Show now playing interface
+        function showNowPlaying(stationName) {
+            const nowPlaying = document.getElementById('nowPlaying');
+            const header = document.getElementById('header');
+            const container = document.querySelector('.container');
+            const stationNamePlaying = document.getElementById('stationNamePlaying');
             
-            if (stationName) {
-                trackText.textContent = '♪ ' + stationName;
-                trackDisplay.classList.add('show');
-            } else {
-                trackDisplay.classList.remove('show');
+            stationNamePlaying.textContent = stationName;
+            nowPlaying.classList.add('show');
+            header.classList.add('playing');
+            container.classList.add('playing');
+            
+            // Reset track info
+            document.getElementById('artistName').textContent = '';
+            document.getElementById('songTitle').textContent = '';
+            resetAlbumArt();
+            
+            // Immediately show station info to avoid blank screen
+            const immediateMetadata = generateStationMetadata(stationName);
+            updateTrackInfo(immediateMetadata);
+            fetchAlbumArt(immediateMetadata.artist, immediateMetadata.title);
+        }
+        
+        // Hide now playing interface
+        function hideNowPlaying() {
+            const nowPlaying = document.getElementById('nowPlaying');
+            const header = document.getElementById('header');
+            const container = document.querySelector('.container');
+            
+            nowPlaying.classList.remove('show');
+            header.classList.remove('playing');
+            container.classList.remove('playing');
+            resetDynamicBackground();
+        }
+        
+        // Start metadata fetching
+        function startMetadataFetching(stationName) {
+            // Clear any existing interval
+            if (metadataInterval) {
+                clearInterval(metadataInterval);
             }
+            
+            // Try to get ICY metadata from stream first
+            if (currentAudio) {
+                setupStreamMetadataReader(currentAudio, stationName);
+            }
+            
+            // Fetch metadata immediately (with slight delay to let UI settle)
+            setTimeout(() => {
+                fetchMetadata(stationName);
+            }, 500);
+            
+            // Then every 15 seconds for updates (fallback for streams without ICY)
+            metadataInterval = setInterval(() => {
+                if (!streamMetadataSupported) {
+                    fetchMetadata(stationName);
+                }
+            }, 15000);
+        }
+        
+        // Fetch metadata for different stations
+        async function fetchMetadata(stationName) {
+            console.log('Fetching metadata for:', stationName);
+            
+            // Always get fresh station metadata as fallback
+            const stationMetadata = generateStationMetadata(stationName);
+            let metadata = stationMetadata;
+            let apiSuccess = false;
+            
+            try {
+                // Try to get real metadata with a timeout
+                const apiCall = async () => {
+                    if (stationName.toLowerCase().includes('kcrw')) {
+                        return await fetchKCRWMetadata();
+                    } else if (stationName.toLowerCase().includes('kexp')) {
+                        return await fetchKEXPMetadata();
+                    } else if (stationName.toLowerCase().includes('wfmu')) {
+                        return await fetchWFMUMetadata();
+                    }
+                    return null;
+                };
+                
+                // Race between API call and timeout
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('API timeout')), 3000)
+                );
+                
+                const apiMetadata = await Promise.race([apiCall(), timeoutPromise]);
+                
+                if (apiMetadata && apiMetadata.artist && apiMetadata.title) {
+                    metadata = apiMetadata;
+                    apiSuccess = true;
+                    console.log('Got real metadata:', metadata);
+                } else {
+                    console.log('API returned no valid data, using station metadata');
+                }
+                
+            } catch (error) {
+                console.log('API failed or timed out, using station metadata:', error.message);
+            }
+            
+            // Always update UI (either with real data or station data)
+            console.log('Updating with metadata:', metadata);
+            
+            // Only update if data actually changed
+            if (metadata.artist !== currentTrackInfo.artist || metadata.title !== currentTrackInfo.title) {
+                currentTrackInfo = metadata;
+                updateTrackInfo(metadata);
+                fetchAlbumArt(metadata.artist, metadata.title);
+            }
+        }
+        
+        // Demo tracks array (shared between sync and async functions)
+        const DEMO_TRACKS = [
+            { artist: 'Radiohead', title: 'Everything In Its Right Place', album: 'Kid A' },
+            { artist: 'Aphex Twin', title: 'Windowlicker', album: 'Windowlicker EP' },
+            { artist: 'Boards of Canada', title: 'Roygbiv', album: 'Music Has the Right to Children' },
+            { artist: 'Thom Yorke', title: 'Hearing Damage', album: 'The Eraser Rmxs' },
+            { artist: 'Squarepusher', title: 'Come On My Selector', album: 'Hard Normal Daddy' },
+            { artist: 'Autechre', title: 'Gantz Graf', album: 'Gantz Graf EP' },
+            { artist: 'Flying Lotus', title: 'Never Catch Me', album: 'You\'re Dead!' },
+            { artist: 'Four Tet', title: 'Two Thousand and Seventeen', album: 'New Energy' },
+            { artist: 'Burial', title: 'Archangel', album: 'Untrue' },
+            { artist: 'Jon Hopkins', title: 'Open Eye Signal', album: 'Immunity' }
+        ];
+
+        // Generate real station metadata (for immediate display)
+        function generateStationMetadata(stationName) {
+            // Show actual station information instead of fake tracks
+            return {
+                artist: stationName,
+                title: 'Live Radio',
+                album: 'Internet Radio',
+                station: stationName
+            };
+        }
+        
+        // Generate demo metadata with rotating tracks (only for testing)
+        async function generateDemoMetadata(stationName) {
+            return generateStationMetadata(stationName);
+        }
+        
+        // Fetch KCRW metadata
+        async function fetchKCRWMetadata() {
+            try {
+                console.log('Trying KCRW API...');
+                const response = await fetch('https://tracklist-api.kcrw.com/Music/', {
+                    mode: 'cors'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('KCRW data:', data);
+                    return {
+                        artist: data.artist || 'KCRW',
+                        title: data.title || 'Eclectic 24',
+                        album: data.album || 'Live Radio'
+                    };
+                }
+            } catch (e) {
+                console.log('KCRW API failed:', e);
+            }
+            return await generateDemoMetadata('KCRW');
+        }
+        
+        // Fetch KEXP metadata
+        async function fetchKEXPMetadata() {
+            try {
+                console.log('Trying KEXP API...');
+                const response = await fetch('https://legacy-api.kexp.org/play/?format=json&limit=1', {
+                    mode: 'cors'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('KEXP data:', data);
+                    if (data.results && data.results.length > 0) {
+                        const track = data.results[0];
+                        return {
+                            artist: track.artist || 'KEXP',
+                            title: track.song || '90.3 FM',
+                            album: track.album || 'Live Radio'
+                        };
+                    }
+                }
+            } catch (e) {
+                console.log('KEXP API failed:', e);
+            }
+            return await generateDemoMetadata('KEXP');
+        }
+        
+        // Fetch WFMU metadata
+        async function fetchWFMUMetadata() {
+            // WFMU doesn't have a public API, return station info
+            return {
+                artist: 'WFMU',
+                title: 'Freeform Radio',
+                album: '91.1 FM - Jersey City'
+            };
+        }
+        
+        // Update track information in UI
+        function updateTrackInfo(metadata) {
+            console.log('Updating UI with metadata:', metadata);
+            document.getElementById('artistName').textContent = metadata.artist || '';
+            document.getElementById('songTitle').textContent = metadata.title || '';
+            
+            // Force UI update
+            setTimeout(() => {
+                console.log('Artist element text:', document.getElementById('artistName').textContent);
+                console.log('Song element text:', document.getElementById('songTitle').textContent);
+            }, 100);
+        }
+        
+        // Fetch album art and update visuals
+        async function fetchAlbumArt(artist, title) {
+            console.log('Fetching album art for:', artist, '-', title);
+            
+            const albumArt = document.getElementById('albumArt');
+            
+            // Generate dynamic colors immediately
+            const colors = generateDynamicColors(artist + title);
+            console.log('Generated colors:', colors);
+            
+            // Update background and album art immediately
+            setDynamicBackground(colors);
+            albumArt.style.background = `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`;
+            
+            // Clear any existing image
+            const existingImg = albumArt.querySelector('img');
+            if (existingImg) {
+                existingImg.remove();
+            }
+            
+            // Try to fetch real album art with timeout
+            try {
+                const searchQuery = encodeURIComponent(`${artist} ${title}`.substring(0, 100)); // Limit search length
+                
+                const fetchPromise = fetch(`https://itunes.apple.com/search?term=${searchQuery}&media=music&limit=1`);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Album art timeout')), 2000)
+                );
+                
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.results && data.results.length > 0) {
+                        const result = data.results[0];
+                        let artworkUrl = result.artworkUrl100 || result.artworkUrl60 || result.artworkUrl30;
+                        
+                        if (artworkUrl) {
+                            // Upgrade to higher resolution
+                            artworkUrl = artworkUrl.replace(/\d+x\d+/, '300x300');
+                            console.log('Found artwork:', artworkUrl);
+                            
+                            // Load image with timeout
+                            const img = new Image();
+                            img.crossOrigin = 'anonymous';
+                            
+                            const imgLoadPromise = new Promise((resolve, reject) => {
+                                img.onload = resolve;
+                                img.onerror = reject;
+                                setTimeout(reject, 3000); // 3 second timeout for image load
+                            });
+                            
+                            img.src = artworkUrl;
+                            
+                            try {
+                                await imgLoadPromise;
+                                albumArt.innerHTML = '';
+                                albumArt.appendChild(img);
+                                console.log('Album art loaded successfully');
+                            } catch (imgError) {
+                                console.log('Image load failed, keeping gradient');
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.log('Album art fetch failed or timed out:', error.message);
+            }
+        }
+        
+        // Generate dynamic colors based on text
+        function generateDynamicColors(text) {
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) {
+                const char = text.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            
+            const hue1 = Math.abs(hash) % 360;
+            const hue2 = (hue1 + 60) % 360;
+            
+            return {
+                primary: `hsl(${hue1}, 70%, 50%)`,
+                secondary: `hsl(${hue2}, 60%, 40%)`,
+                background: `hsl(${hue1}, 30%, 20%)`
+            };
+        }
+        
+        // Set dynamic background
+        function setDynamicBackground(colors) {
+            const bg = document.getElementById('dynamicBg');
+            
+            console.log('Setting background with colors:', colors);
+            bg.style.background = `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 50%, ${colors.background} 100%)`;
+            
+            // Update CSS custom property for header
+            const rgbValues = hslToRgb(colors.background);
+            document.documentElement.style.setProperty('--dynamic-bg', `rgba(${rgbValues}, 0.9)`);
+            
+            console.log('Background updated successfully');
+        }
+        
+        // Reset dynamic background
+        function resetDynamicBackground() {
+            const bg = document.getElementById('dynamicBg');
+            bg.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+            document.documentElement.style.removeProperty('--dynamic-bg');
+        }
+        
+        // Reset album art
+        function resetAlbumArt() {
+            const albumArt = document.getElementById('albumArt');
+            albumArt.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            
+            const img = albumArt.querySelector('img');
+            if (img) {
+                img.remove();
+            }
+        }
+        
+        // Helper function to convert HSL to RGB
+        function hslToRgb(hslString) {
+            // Extract HSL values from string like "hsl(180, 30%, 20%)"
+            const match = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            if (!match) return '30, 60, 114';
+            
+            const h = parseInt(match[1]) / 360;
+            const s = parseInt(match[2]) / 100;
+            const l = parseInt(match[3]) / 100;
+            
+            let r, g, b;
+            
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            
+            return `${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}`;
         }
         
         // Event listeners
