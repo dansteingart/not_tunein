@@ -317,6 +317,110 @@ def get_volume():
 
     return jsonify(out)
 
+@app.route('/volume_up',methods = ['GET'])
+def volume_up():
+    data = request.args
+    if BACKEND == "sonos":
+        zone = data['zone']
+        current_vol = SoCo(zs[zone]).volume
+        new_vol = current_vol + 5
+        SoCo(zs[zone]).volume = new_vol
+        socketio.emit("volume",json.dumps({'volume':new_vol}))
+        out = {'result':'success','action':f"{zone} volume up to {new_vol}","volume":new_vol}
+    if BACKEND == "mpc":
+        current_vol = int(get_vol_mpc())
+        new_vol = current_vol + 5
+        vol_mpc(new_vol)
+        socketio.emit("volume",{'volume':new_vol})
+        out = {'result':'success','action':f"volume up to {new_vol}","volume":new_vol}
+    return jsonify(out)
+
+@app.route('/volume_down',methods = ['GET'])
+def volume_down():
+    data = request.args
+    if BACKEND == "sonos":
+        zone = data['zone']
+        current_vol = SoCo(zs[zone]).volume
+        new_vol = current_vol - 5
+        SoCo(zs[zone]).volume = new_vol
+        socketio.emit("volume",json.dumps({'volume':new_vol}))
+        out = {'result':'success','action':f"{zone} volume down to {new_vol}","volume":new_vol}
+    if BACKEND == "mpc":
+        current_vol = int(get_vol_mpc())
+        new_vol = current_vol - 5
+        vol_mpc(new_vol)
+        socketio.emit("volume",{'volume':new_vol})
+        out = {'result':'success','action':f"volume down to {new_vol}","volume":new_vol}
+    return jsonify(out)
+
+@app.route('/station_up',methods = ['GET'])
+def station_up():
+    global current_station, state
+    data = request.args
+
+    # Find current station index
+    try:
+        current_idx = skeys.index(current_station)
+    except:
+        current_idx = -1
+
+    # Move to next station (wrap around)
+    next_idx = (current_idx + 1) % len(skeys)
+    station = skeys[next_idx]
+    current_station = station
+    state = current_station
+
+    if BACKEND == "sonos":
+        zone = data['zone']
+        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
+        out = {'result':'success','station':station,'zone':zone}
+    if BACKEND == "mpc":
+        clear_mpc()
+        add_mpc(stations[station])
+        if osa and current_station.find("Apple Music") == 0:
+            play_osa()
+        else:
+            play_mpc()
+        out = {'result':'success','station':station}
+
+    socketio.emit("play",out)
+    if pync: notify(f"Playing {station}",title='NT')
+    return jsonify(out)
+
+@app.route('/station_down',methods = ['GET'])
+def station_down():
+    global current_station, state
+    data = request.args
+
+    # Find current station index
+    try:
+        current_idx = skeys.index(current_station)
+    except:
+        current_idx = 0
+
+    # Move to previous station (wrap around)
+    prev_idx = (current_idx - 1) % len(skeys)
+    station = skeys[prev_idx]
+    current_station = station
+    state = current_station
+
+    if BACKEND == "sonos":
+        zone = data['zone']
+        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
+        out = {'result':'success','station':station,'zone':zone}
+    if BACKEND == "mpc":
+        clear_mpc()
+        add_mpc(stations[station])
+        if osa and current_station.find("Apple Music") == 0:
+            play_osa()
+        else:
+            play_mpc()
+        out = {'result':'success','station':station}
+
+    socketio.emit("play",out)
+    if pync: notify(f"Playing {station}",title='NT')
+    return jsonify(out)
+
 
 status = None
 
