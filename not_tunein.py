@@ -28,12 +28,12 @@ def setTimeout(delay):
 
 
 if BACKEND == "sonos": from soco import SoCo, discover
+if BACKEND == "sonos": from soco import SoCo, discover
 
 KCRW_url = "https://tracklist-api.kcrw.com/Music/"
 
-PORT = 9000
 
-BURL = "http://localhost:9000"
+BURL = f"http://localhost:{PORT}"
 
 if len(sys.argv) > 1:
     try: 

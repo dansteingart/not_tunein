@@ -153,14 +153,27 @@
                     console.log(key);
                     console.log(state)
                     val = state[key]
-                    if (val != null) 
+                    if (val != null)
                     {
                         $(`#${key}`).val(val);
-                        get_volume();
+                        // Check if the value was actually set (i.e., it exists in the options)
+                        if ($(`#${key}`).val() !== val) {
+                            // If not, select the first option
+                            $(`#${key}`).val($(`#${key} option:first`).val());
+                            console.log(`${key} '${val}' not found, selecting first available option`);
+                        }
                     }
-                
-                }  
-            catch(e) {console.log(e)}
+                    else {
+                        // If no saved value, select the first option
+                        $(`#${key}`).val($(`#${key} option:first`).val());
+                    }
+
+                }
+            catch(e) {
+                console.log(e);
+                // On error, select the first option
+                $(`#${key}`).val($(`#${key} option:first`).val());
+            }
                 
         
             if (things['zone']['mpc']=='mpc') $("#zoner").hide();
