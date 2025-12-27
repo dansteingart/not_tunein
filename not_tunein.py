@@ -197,10 +197,35 @@ def restation():
 
 @app.route('/mpc_status')
 def mpc_status():
-    if BACKEND == "mpc": 
+    if BACKEND == "mpc":
         foo = get_status_mpc()
     else: foo = "not mpc"
     return foo
+
+@app.route('/track_status', methods=['POST', 'GET'])
+def track_status():
+    track = {}
+    if BACKEND == "mpc":
+        track = get_status_mpc()
+    elif BACKEND == "sonos":
+        try:
+            data = request.json if request.method == 'POST' else request.args
+            zone = data.get('zone')
+            if zone and zone in zs:
+                track_info = SoCo(zs[zone]).get_current_track_info()
+                track['artist'] = track_info.get('artist', '')
+                track['title'] = track_info.get('title', '')
+                track['album'] = track_info.get('album', '')
+                track['station'] = track_info.get('radio_show', current_station or '')
+                track['uri'] = track_info.get('uri', '')
+            else:
+                track['error'] = 'Zone not specified or not found'
+        except Exception as E:
+            track['error'] = str(E)
+    else:
+        track['error'] = 'Unknown backend'
+
+    return jsonify(track)
 
 
 

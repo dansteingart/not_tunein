@@ -123,17 +123,20 @@
     });
 
 
-    socket.on('system_update', (data)=>{if (data['system'] == "mpc" ) {
-        //$("#sleepid").hide();
-        backend="mpc";
+    socket.on('system_update', (data)=>{
+        backend = data['system'];
         console.log(data);
         if (data['station']!=null) $("#station").val(data['station'])
-	    fit();
-        //setInterval(function(){$.get("/mpc_status",(data)=>{tracker(data)})},5000);
-    } 
-    
-    
-    
+        fit();
+
+        if (backend == "mpc") {
+            //$("#sleepid").hide();
+        } else if (backend == "sonos") {
+            // Start polling for Sonos track status
+            setInterval(function(){
+                $.get("/track_status?zone=" + $("#zone").val(), (data)=>{tracker(data)})
+            }, 5000);
+        }
     });
 
 
@@ -242,7 +245,11 @@
         $("#holdz").html($("#zone").val())
         $("#station").width($("#holds").width())
         $("#zone").width($("#holdz").width())
-        if (backend=="mpc") setTimeout(function(){$.get("/mpc_status",(data)=>{tracker(data)})},1000);
+        if (backend=="mpc") {
+            setTimeout(function(){$.get("/mpc_status",(data)=>{tracker(data)})},1000);
+        } else if (backend=="sonos") {
+            setTimeout(function(){$.get("/track_status?zone=" + $("#zone").val(), (data)=>{tracker(data)})},1000);
+        }
     }
 
 
