@@ -6,3 +6,5 @@ __pycache__/settings.cpython-39.pyc
 start_not.sh
 track.db
 tracks.db
+irqtt/config.h
+.webui_secret_key

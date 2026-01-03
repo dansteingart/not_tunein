@@ -1,0 +1,19 @@
+/*
+ * WiFi and MQTT Configuration
+ * Edit this file with your credentials
+ */
+
+#ifndef CONFIG_H
+#define CONFIG_H
+
+// WiFi credentials
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
+
+// MQTT settings
+#define MQTT_SERVER ""
+#define MQTT_PORT 1883
+#define MQTT_TOPIC ""
+#define SONOS_ROOM ""
+
+#endif
