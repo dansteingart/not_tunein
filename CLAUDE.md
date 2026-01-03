@@ -74,7 +74,8 @@ On first run, `settings.py` is automatically created from `settings.py.example`.
 **MQTT Settings** (only used if ENABLE_MQTT = True):
 - `MQTT_BROKER` - MQTT broker hostname
 - `MQTT_PORT` - MQTT broker port (typically 1883)
-- `MQTT_TOPIC` - Topic for publishing track metadata (command topic auto-derived)
+- `MQTT_TOPIC` - Topic for publishing track metadata
+- `MQTT_CMD_TOPIC` - Topic for receiving IR remote commands (must match `irqtt/config.h`)
 
 **Station List Format** (Google Sheets TSV export):
 - Column 1: Station name (display name)

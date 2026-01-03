@@ -18,4 +18,5 @@ ENABLE_MQTT = False     # Enable MQTT for IR remote control and track publishing
 # MQTT Configuration (only used if ENABLE_MQTT = True)
 MQTT_BROKER = "localhost"
 MQTT_PORT = 1883
-MQTT_TOPIC = "not_tunein/tracks/record"
+MQTT_TOPIC = "not_tunein/tracks/record"        # Topic for publishing track metadata
+MQTT_CMD_TOPIC = "not_tunein/tracks/cmd"       # Topic for receiving IR remote commands

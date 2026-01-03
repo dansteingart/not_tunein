@@ -73,8 +73,9 @@ if ENABLE_MQTT:
     import paho.mqtt.client as mqtt
     print("doing mqtt stuff!")
 
-    # MQTT command topic for receiving commands from IR remote
-    MQTT_CMD_TOPIC = MQTT_TOPIC.replace("/record", "/cmd")
+    # Set default command topic if not specified
+    if 'MQTT_CMD_TOPIC' not in dir():
+        MQTT_CMD_TOPIC = MQTT_TOPIC.replace("/record", "/cmd")
 
     def on_connect(client, userdata, flags, rc):
         print("Connected with result code "+str(rc))
