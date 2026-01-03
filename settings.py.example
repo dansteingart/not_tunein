@@ -1,3 +1,21 @@
+# Not TuneIn Configuration
+# Copy this file to settings.py and configure for your setup
+
+# Backend type: "sonos" or "mpc"
 BACKEND = "sonos"
+
+# Port for web server (default: 9000)
+PORT = 9000
+
+# Station list URL (Google Sheets TSV export)
 STATIONSCSV = "https://docs.google.com/spreadsheets/d/1eCQ94Ur71X0C5-EoPVfuTXJH6f3zYkt1pFmO2872eVs/export?format=tsv"
-PORT = 9020
+
+# Optional Features (set to True to enable)
+ENABLE_OSA = False      # Enable Apple Music/OSA integration (macOS only)
+ENABLE_PYNC = False     # Enable macOS desktop notifications
+ENABLE_MQTT = False     # Enable MQTT for IR remote control and track publishing
+
+# MQTT Configuration (only used if ENABLE_MQTT = True)
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
+MQTT_TOPIC = "not_tunein/tracks/record"

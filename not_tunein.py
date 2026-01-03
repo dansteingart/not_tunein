@@ -2,23 +2,49 @@
 ##Date Started: 2022-08-12
 ##Notes: Not TuneIn Radio Controller for Sonos,MPD
 
+import os
+import shutil
 from flask import Flask, jsonify, request
 import json
 import requests
 import sys
 from subprocess import getoutput as go
+
+# Check if settings.py exists, if not copy from example
+if not os.path.exists('settings.py'):
+    if os.path.exists('settings.py.example'):
+        shutil.copy('settings.py.example', 'settings.py')
+        print("Created settings.py from settings.py.example")
+        print("Please edit settings.py to configure your setup")
+    else:
+        print("ERROR: settings.py.example not found!")
+        sys.exit(1)
+
 from settings import *
 from flask_socketio import SocketIO, emit, send
 import threading
 import time
-import sys
 from sqlite_utils import Database
-from pync import notify
 
-osa = False
-pync = False
-if "osa" in sys.argv: osa = True
-if "pync" in sys.argv: pync = True
+# Set defaults for optional settings if not defined
+if 'ENABLE_OSA' not in dir(): ENABLE_OSA = False
+if 'ENABLE_PYNC' not in dir(): ENABLE_PYNC = False
+if 'ENABLE_MQTT' not in dir(): ENABLE_MQTT = False
+if 'PORT' not in dir(): PORT = 9000
+
+# Allow PORT override via command line for backwards compatibility
+if len(sys.argv) > 1:
+    try:
+        PORT = int(sys.argv[1])
+    except:
+        pass
+
+osa = ENABLE_OSA
+pync = ENABLE_PYNC
+
+# Conditionally import pync if enabled
+if pync:
+    from pync import notify
 
 def setTimeout(delay):
     timer = threading.Timer(delay, stop_mpc)
@@ -35,13 +61,6 @@ KCRW_url = "https://tracklist-api.kcrw.com/Music/"
 
 BURL = f"http://localhost:{PORT}"
 
-if len(sys.argv) > 1:
-    try: 
-        PORT = int(sys.argv[1])
-    except:
-        print("port must be an integer, quitting")
-        exit()
-
 zs = {}
 stations = {}
 
@@ -50,18 +69,122 @@ socketio = SocketIO(app)
 
 if pync: print("will let you know stuff")
 
-if "mqtt" in sys.argv:
+if ENABLE_MQTT:
     import paho.mqtt.client as mqtt
     print("doing mqtt stuff!")
+
+    # MQTT command topic for receiving commands from IR remote
+    MQTT_CMD_TOPIC = MQTT_TOPIC.replace("/record", "/cmd")
+
     def on_connect(client, userdata, flags, rc):
         print("Connected with result code "+str(rc))
+        client.subscribe(MQTT_CMD_TOPIC)
+        print(f"Subscribed to {MQTT_CMD_TOPIC}")
 
     def on_disconnect(client, userdata, rc):
-        print("Disconnected with result code "+str(flags))
+        print("Disconnected with result code "+str(rc))
+
+    def on_message(client, userdata, msg):
+        """Handle incoming MQTT commands from IR remote"""
+        global current_station, state
+        try:
+            pl = json.loads(msg.payload)
+            print(f"MQTT command received: {pl}")
+
+            # Handle station selection
+            if "station" in pl:
+                station_idx = pl['station']
+                if station_idx < len(skeys):
+                    station = skeys[station_idx]
+                    current_station = station
+                    state = current_station
+                    if BACKEND == "sonos":
+                        zone = pl.get('room')
+                        if zone and zone in zs:
+                            SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station], title=station)
+                            socketio.emit("play", {'result':'success','station':station,'zone':zone})
+                    elif BACKEND == "mpc":
+                        clear_mpc()
+                        add_mpc(stations[station])
+                        if osa and current_station.find("Apple Music") == 0:
+                            play_osa()
+                        else:
+                            play_mpc()
+                        socketio.emit("play", {'result':'success','station':station})
+                    print(f"Playing station: {station}")
+                    if pync: notify(f"Playing {station}",title='NT')
+
+            # Handle commands
+            if "cmd" in pl:
+                cmd = pl['cmd']
+
+                if cmd == "stop":
+                    state = "stopped"
+                    if BACKEND == "sonos":
+                        zone = pl.get('room')
+                        if zone and zone in zs:
+                            SoCo(zs[zone]).stop()
+                    elif BACKEND == "mpc":
+                        clear_mpc()
+                        stop_mpc()
+                        # Cancel sleep timer if exists
+                        try:
+                            if 'tt' in globals():
+                                tt.cancel()
+                                print("Sleep timer cancelled")
+                        except: pass
+                    print("Stopped playback")
+                    if pync: notify("Stopped",title='NT')
+
+                elif cmd == "vup":
+                    if BACKEND == "sonos":
+                        zone = pl.get('room')
+                        if zone and zone in zs:
+                            current_vol = SoCo(zs[zone]).volume
+                            new_vol = current_vol + 5
+                            SoCo(zs[zone]).volume = new_vol
+                            socketio.emit("volume", {'volume': new_vol})
+                    elif BACKEND == "mpc":
+                        current_vol = int(get_vol_mpc())
+                        new_vol = current_vol + 5
+                        vol_mpc(new_vol)
+                        socketio.emit("volume", {'volume': new_vol})
+                    print("Volume up")
+
+                elif cmd == "vdown":
+                    if BACKEND == "sonos":
+                        zone = pl.get('room')
+                        if zone and zone in zs:
+                            current_vol = SoCo(zs[zone]).volume
+                            new_vol = current_vol - 5
+                            SoCo(zs[zone]).volume = new_vol
+                            socketio.emit("volume", {'volume': new_vol})
+                    elif BACKEND == "mpc":
+                        current_vol = int(get_vol_mpc())
+                        new_vol = current_vol - 5
+                        vol_mpc(new_vol)
+                        socketio.emit("volume", {'volume': new_vol})
+                    print("Volume down")
+
+                elif cmd == "sleep":
+                    sleep_seconds = 60 * 60  # 1 hour
+                    if BACKEND == "sonos":
+                        zone = pl.get('room')
+                        if zone and zone in zs:
+                            SoCo(zs[zone]).set_sleep_timer(sleep_seconds)
+                            print(f"Sleep timer set for 1 hour on {zone}")
+                    elif BACKEND == "mpc":
+                        global tt
+                        tt = setTimeout(sleep_seconds)
+                        print("Sleep timer set for 1 hour")
+
+        except Exception as E:
+            print(f"Error processing MQTT message: {E}")
 
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    # client.on_connect = on_connect
-    # client.on_disconnect = on_disconnect
+    client.on_connect = on_connect
+    client.on_disconnect = on_disconnect
+    client.on_message = on_message
 
 def clear_mpc(): 
     go("mpc clear")
@@ -136,7 +259,7 @@ def get_status_mpc():
             del(track['time']) #for alert purposes.
             last_track = track
 
-            if "mqtt" in sys.argv:
+            if ENABLE_MQTT:
                 client.connect(MQTT_BROKER,MQTT_PORT)
                 client.publish(MQTT_TOPIC,json.dumps(track))
                 client.disconnect()
@@ -464,5 +587,19 @@ def periodic_task():
 
 # Start the periodic task in a separate thread
 threading.Thread(target=periodic_task, daemon=True).start()
+
+# Start MQTT client in background thread if mqtt mode enabled
+if ENABLE_MQTT:
+    def mqtt_loop():
+        try:
+            client.connect(MQTT_BROKER, MQTT_PORT, 60)
+            print(f"MQTT connected to {MQTT_BROKER}:{MQTT_PORT}")
+            client.loop_forever()
+        except Exception as e:
+            print(f"MQTT connection error: {e}")
+
+    threading.Thread(target=mqtt_loop, daemon=True).start()
+    print("MQTT client started in background")
+
 if __name__ == '__main__':
     socketio.run(app,port=PORT,host="0.0.0.0",allow_unsafe_werkzeug=True)

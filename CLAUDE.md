@@ -39,30 +39,44 @@ Not TuneIn is a Flask-based web radio controller that bypasses TuneIn's ads and 
 # Install dependencies
 python3 -m pip install -r requirements.txt
 
-# Start the server (defaults to port 9000)
-python3 not_tunein.py [PORT]
+# First run: Creates settings.py from settings.py.example
+python3 not_tunein.py
 
-# Optional runtime flags (can combine multiple)
-python3 not_tunein.py [PORT] osa     # Enable Apple Music/OSA integration (macOS)
-python3 not_tunein.py [PORT] pync    # Enable macOS desktop notifications
-python3 not_tunein.py [PORT] mqtt    # Enable MQTT publishing for track metadata
+# Configure settings.py with your preferences:
+# - BACKEND: "sonos" or "mpc"
+# - PORT: Web server port (default 9000)
+# - ENABLE_OSA: True/False (Apple Music integration, macOS only)
+# - ENABLE_PYNC: True/False (macOS notifications)
+# - ENABLE_MQTT: True/False (IR remote control + track publishing)
+# - MQTT_BROKER, MQTT_PORT, MQTT_TOPIC: MQTT configuration
 
-# Example: Run on port 9000 with all features
-python3 not_tunein.py 9000 osa pync mqtt
+# Start the server (uses settings.py configuration)
+python3 not_tunein.py
+
+# Optional: Override port via command line
+python3 not_tunein.py 8080
 ```
 
 ## Configuration
 
-Edit `settings.py` to configure:
-- `BACKEND` - Either "sonos" or "mpc"
-- `STATIONSCSV` - Google Sheets URL for station list (TSV format, must be exported as TSV)
+On first run, `settings.py` is automatically created from `settings.py.example`. Edit `settings.py` to configure:
 
-For MQTT mode, ensure these variables are defined:
+**Core Settings:**
+- `BACKEND` - Either "sonos" or "mpc"
+- `PORT` - Web server port (default: 9000, can be overridden via command line)
+- `STATIONSCSV` - Google Sheets URL for station list (TSV format)
+
+**Optional Features:**
+- `ENABLE_OSA` - True/False - Apple Music/OSA integration (macOS only)
+- `ENABLE_PYNC` - True/False - macOS desktop notifications
+- `ENABLE_MQTT` - True/False - IR remote control + track publishing
+
+**MQTT Settings** (only used if ENABLE_MQTT = True):
 - `MQTT_BROKER` - MQTT broker hostname
 - `MQTT_PORT` - MQTT broker port (typically 1883)
-- `MQTT_TOPIC` - Topic for publishing track metadata
+- `MQTT_TOPIC` - Topic for publishing track metadata (command topic auto-derived)
 
-Station list format (Google Sheets TSV export):
+**Station List Format** (Google Sheets TSV export):
 - Column 1: Station name (display name)
 - Column 2: Stream URL
 - Column 3: Notes (optional, not used by application)

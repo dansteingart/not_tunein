@@ -1,3 +1,14 @@
+# Core dependencies
 flask
+flask-socketio
 requests
+sqlite-utils
+
+# Optional: Sonos backend support
 SoCo
+
+# Optional: MQTT support (for IR remote control)
+paho-mqtt
+
+# Optional: macOS notifications (only works on macOS)
+pync
