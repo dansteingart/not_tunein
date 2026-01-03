@@ -77,13 +77,13 @@ if ENABLE_MQTT:
     if 'MQTT_CMD_TOPIC' not in dir():
         MQTT_CMD_TOPIC = MQTT_TOPIC.replace("/record", "/cmd")
 
-    def on_connect(client, userdata, flags, rc):
-        print("Connected with result code "+str(rc))
+    def on_connect(client, userdata, flags, reason_code, properties):
+        print("Connected with result code "+str(reason_code))
         client.subscribe(MQTT_CMD_TOPIC)
         print(f"Subscribed to {MQTT_CMD_TOPIC}")
 
-    def on_disconnect(client, userdata, rc):
-        print("Disconnected with result code "+str(rc))
+    def on_disconnect(client, userdata, disconnect_flags, reason_code, properties):
+        print("Disconnected with result code "+str(reason_code))
 
     def on_message(client, userdata, msg):
         """Handle incoming MQTT commands from IR remote"""
