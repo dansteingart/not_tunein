@@ -7,10 +7,20 @@ import paho.mqtt.client as mqtt
 import json
 import requests
 import sys
+import threading
 from subprocess import getoutput as go
 from settings import *
 
 if BACKEND == "sonos": from soco import SoCo, discover
+
+# Sleep timer variable
+sleep_timer = None
+
+def setTimeout(delay):
+    timer = threading.Timer(delay, stop_mpc)
+    timer.start()
+    print(f"sleeping in {delay} seconds")
+    return timer
 
 
 
@@ -50,6 +60,26 @@ zoner()
 
 stationer()
 
+# MPC helper functions
+def clear_mpc():
+    go("mpc clear")
+
+def add_mpc(s):
+    go(f"mpc add {s}")
+
+def play_mpc():
+    go(f"mpc play")
+
+def stop_mpc():
+    go(f"mpc stop")
+
+def vol_mpc(i):
+    go(f"mpc volume {i}")
+
+def get_vol_mpc():
+    vv = go("mpc volume").split(":")[1].strip().replace("%","")
+    return vv
+
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code "+str(rc))
@@ -58,10 +88,11 @@ def on_connect(client, userdata, flags, rc):
 def on_message(client, userdata, msg):
     pl = json.loads(msg.payload)
     if "station" in pl: play_station(pl)
-    if "cmd" in pl: 
+    if "cmd" in pl:
         if pl['cmd'] == "stop":  stop(pl)
         if pl['cmd'] == "vup":   vup(pl)
         if pl['cmd'] == "vdown": vdown(pl)
+        if pl['cmd'] == "sleep": sleep(pl)
 
 
 
@@ -82,16 +113,32 @@ def play_station(pl):
 
 
 def stop(pl):
-    if BACKEND == "sonos": 
+    global sleep_timer
+    if BACKEND == "sonos":
         zone = pl['room']
         SoCo(zs[zone]).stop()
-        out = {'result':'success','action':f"stopped {zone}"}    
+        out = {'result':'success','action':f"stopped {zone}"}
     if BACKEND == "mpc":
         clear_mpc()
         stop_mpc()
-        out = {'result':'success','action':f"stopped"}    
+        # Cancel sleep timer if it exists
+        if sleep_timer:
+            sleep_timer.cancel()
+            sleep_timer = None
+            print("Sleep timer cancelled")
+        out = {'result':'success','action':f"stopped"}
 
-def vup(pl):   SoCo(zs[pl['room']]).volume = SoCo(zs[pl['room']]).volume + 5 
+def sleep(pl):
+    sleep_minutes = 45  # 45 minutes
+    sleep_seconds = sleep_minutes * 60
+    if BACKEND == "sonos":
+        zone = pl['room']
+        SoCo(zs[zone]).set_sleep_timer(sleep_seconds)
+        print(f"Sonos sleep timer set for {sleep_minutes} minutes on {zone}")
+    if BACKEND == "mpc":
+        print(f"can't help here yet")
+
+def vup(pl):   SoCo(zs[pl['room']]).volume = SoCo(zs[pl['room']]).volume + 5
 def vdown(pl): SoCo(zs[pl['room']]).volume = SoCo(zs[pl['room']]).volume - 5 
 
 

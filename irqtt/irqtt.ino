@@ -235,7 +235,10 @@ void loop() {
           sendStationCommand(11);
           break;
         case 0xFF10EF: Serial.println("L (Left)"); break;
-        case 0xFF5AA5: Serial.println("R (Right)"); break;
+        case 0xFF5AA5:
+          Serial.println("R (Right) - Sleep");
+          sendMQTTCommand("sleep");
+          break;
         case 0xFF18E7:
           Serial.println("U (Up) - Volume Up");
           sendMQTTCommand("vup");
