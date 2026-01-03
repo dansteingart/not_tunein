@@ -87,7 +87,7 @@ if ENABLE_MQTT:
 
     def on_message(client, userdata, msg):
         """Handle incoming MQTT commands from IR remote"""
-        global current_station, state
+        global current_station, state, tt
         try:
             pl = json.loads(msg.payload)
             print(f"MQTT command received: {pl}")
@@ -175,7 +175,6 @@ if ENABLE_MQTT:
                             SoCo(zs[zone]).set_sleep_timer(sleep_seconds)
                             print(f"Sleep timer set for 1 hour on {zone}")
                     elif BACKEND == "mpc":
-                        global tt
                         tt = setTimeout(sleep_seconds)
                         print("Sleep timer set for 1 hour")
 
