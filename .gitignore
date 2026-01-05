@@ -9,3 +9,4 @@ tracks.db
 irqtt/config.h
 .webui_secret_key
 static/jsmediatags.min.js
+.worktrees/
