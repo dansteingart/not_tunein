@@ -25,6 +25,7 @@ from flask_socketio import SocketIO, emit, send
 import threading
 import time
 from sqlite_utils import Database
+import yt_dlp
 
 # Set defaults for optional settings if not defined
 if 'ENABLE_OSA' not in dir(): ENABLE_OSA = False
@@ -99,14 +100,31 @@ if ENABLE_MQTT:
                     station = skeys[station_idx]
                     current_station = station
                     state = current_station
+
+                    # Get station URL
+                    station_url = stations[station]
+
                     if BACKEND == "sonos":
+                        # YouTube URLs not supported on Sonos
+                        if is_youtube_url(station_url):
+                            print(f"MQTT: YouTube URLs not supported on Sonos")
+                            return
                         zone = pl.get('room')
                         if zone and zone in zs:
-                            SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station], title=station)
+                            SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+station_url, title=station)
                             socketio.emit("play", {'result':'success','station':station,'zone':zone})
                     elif BACKEND == "mpc":
                         clear_mpc()
-                        add_mpc(stations[station])
+                        # Extract stream URL for YouTube URLs
+                        if is_youtube_url(station_url):
+                            print(f"MQTT: extracting stream URL for {station}...")
+                            stream_url = get_youtube_stream_url(station_url)
+                            if stream_url:
+                                station_url = stream_url
+                            else:
+                                print(f"MQTT: Could not extract YouTube stream URL")
+                                return
+                        add_mpc(station_url)
                         if osa and current_station.find("Apple Music") == 0:
                             play_osa()
                         else:
@@ -186,7 +204,50 @@ if ENABLE_MQTT:
     client.on_disconnect = on_disconnect
     client.on_message = on_message
 
-def clear_mpc(): 
+# YouTube Music support functions
+import subprocess
+
+def is_youtube_url(url):
+    """Check if URL is a YouTube or YouTube Music URL"""
+    youtube_domains = ['youtube.com', 'youtu.be', 'music.youtube.com']
+    return any(domain in url for domain in youtube_domains)
+
+def get_youtube_stream_url(url):
+    """Get direct stream URL from YouTube using yt-dlp.
+
+    Returns a playable stream URL that MPD/Sonos can use.
+    Note: YouTube URLs expire after some time (typically 6 hours).
+    """
+    try:
+        # Use yt-dlp to get the direct stream URL
+        # --get-url extracts the actual media URL without downloading
+        # --playlist-items 1 gets only the first track from playlists
+        cmd = ['yt-dlp', '-f', 'bestaudio', '--get-url', '--playlist-items', '1', url]
+
+        print(f"  Extracting stream URL from YouTube...")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+
+        if result.returncode == 0:
+            # Get the first line that looks like a URL (ignoring warnings)
+            for line in result.stdout.split('\n'):
+                line = line.strip()
+                if line.startswith('http'):
+                    print(f"  ✓ Got stream URL (length: {len(line)} chars)")
+                    return line
+
+        print(f"  Error: yt-dlp failed with return code {result.returncode}")
+        if result.stderr:
+            print(f"  Error output: {result.stderr[:200]}")
+        return None
+
+    except subprocess.TimeoutExpired:
+        print(f"  Error: yt-dlp timed out after 15 seconds")
+        return None
+    except Exception as e:
+        print(f"  Error extracting YouTube URL: {e}")
+        return None
+
+def clear_mpc():
     go("mpc clear")
     if osa: go("osascript -e 'tell application \"Music\" to stop'")
 
@@ -364,22 +425,48 @@ def play_station():
     try: data = request.json
     except: data = request.form
     station = data['station']
+
+    # Convert station index to station name if needed
+    if isinstance(station, int) or (isinstance(station, str) and station.isdigit()):
+        station = skeys[int(station)]
+
     current_station = station
-    if BACKEND == "sonos": 
+
+    # Get the station URL
+    station_url = stations[station]
+
+    if BACKEND == "sonos":
+        # Check if it's a YouTube URL - not supported on Sonos (URLs expire too quickly)
+        if is_youtube_url(station_url):
+            out = {'result':'error','message':'YouTube Music is not supported on Sonos (stream URLs expire too quickly for reliable playback)'}
+            return jsonify(out)
         zone = data['zone']
-        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
-        out = {'result':'success','station':station,'zone':zone}    
+        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+station_url,title=station)
+        out = {'result':'success','station':station,'zone':zone}
+
     if BACKEND == "mpc":
         clear_mpc()
-        try: add_mpc(stations[station])
-        except: 
-              station = skeys[int(station)]
-              #print(station)
-              add_mpc(stations[station])
+
+        # Check if it's a YouTube URL and set up FIFO streaming
+        if is_youtube_url(station_url):
+            print(f"Detected YouTube URL for {station}, extracting stream URL...")
+            stream_url = get_youtube_stream_url(station_url)
+            if stream_url:
+                station_url = stream_url
+            else:
+                out = {'result':'error','message':'Could not extract YouTube stream URL'}
+                return jsonify(out)
+
+        # Add to MPD and play
+        add_mpc(station_url)
+
         current_station = station
-        if osa and current_station.find("Apple Music") ==0: play_osa()
-        else: play_mpc()
-        out = {'result':'success','station':station}    
+        if osa and current_station.find("Apple Music") ==0:
+            play_osa()
+        else:
+            play_mpc()
+        out = {'result':'success','station':station}
+
     socketio.emit("play",out)
     if pync: notify(f"Playing {station}",title='NT')
     return jsonify(out)
@@ -518,13 +605,30 @@ def station_up():
     current_station = station
     state = current_station
 
+    # Get station URL
+    station_url = stations[station]
+
     if BACKEND == "sonos":
+        # YouTube URLs not supported on Sonos
+        if is_youtube_url(station_url):
+            out = {'result':'error','message':'YouTube Music is not supported on Sonos'}
+            return jsonify(out)
         zone = data['zone']
-        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
+        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+station_url,title=station)
         out = {'result':'success','station':station,'zone':zone}
+
     if BACKEND == "mpc":
         clear_mpc()
-        add_mpc(stations[station])
+        # Extract stream URL for YouTube URLs
+        if is_youtube_url(station_url):
+            print(f"Station Up: extracting stream URL for {station}...")
+            stream_url = get_youtube_stream_url(station_url)
+            if stream_url:
+                station_url = stream_url
+            else:
+                out = {'result':'error','message':'Could not extract YouTube stream URL'}
+                return jsonify(out)
+        add_mpc(station_url)
         if osa and current_station.find("Apple Music") == 0:
             play_osa()
         else:
@@ -552,13 +656,30 @@ def station_down():
     current_station = station
     state = current_station
 
+    # Get station URL
+    station_url = stations[station]
+
     if BACKEND == "sonos":
+        # YouTube URLs not supported on Sonos
+        if is_youtube_url(station_url):
+            out = {'result':'error','message':'YouTube Music is not supported on Sonos'}
+            return jsonify(out)
         zone = data['zone']
-        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+stations[station],title=station)
+        SoCo(zs[zone]).play_uri("x-rincon-mp3radio://"+station_url,title=station)
         out = {'result':'success','station':station,'zone':zone}
+
     if BACKEND == "mpc":
         clear_mpc()
-        add_mpc(stations[station])
+        # Extract stream URL for YouTube URLs
+        if is_youtube_url(station_url):
+            print(f"Station Down: extracting stream URL for {station}...")
+            stream_url = get_youtube_stream_url(station_url)
+            if stream_url:
+                station_url = stream_url
+            else:
+                out = {'result':'error','message':'Could not extract YouTube stream URL'}
+                return jsonify(out)
+        add_mpc(station_url)
         if osa and current_station.find("Apple Music") == 0:
             play_osa()
         else:
