@@ -88,10 +88,14 @@ if ENABLE_MQTT:
 
     def on_message(client, userdata, msg):
         """Handle incoming MQTT commands from IR remote"""
-        global current_station, state, tt
+        global current_station, state, tt, current_station_idx, current_mqtt_node
         try:
             pl = json.loads(msg.payload)
             print(f"MQTT command received: {pl}")
+
+            # Track the MQTT node for light control
+            if "room" in pl:
+                current_mqtt_node = pl['room']
 
             # Handle station selection
             if "station" in pl:
@@ -99,6 +103,7 @@ if ENABLE_MQTT:
                 if station_idx < len(skeys):
                     station = skeys[station_idx]
                     current_station = station
+                    current_station_idx = station_idx  # Track for button blinking
                     state = current_station
 
                     # Get station URL
@@ -203,6 +208,24 @@ if ENABLE_MQTT:
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
     client.on_message = on_message
+
+    def send_trellis_light(node, button, color, duration_ms):
+        """Send a light command to the NeoTrellis via MQTT.
+
+        Args:
+            node: The MQTT node name (e.g., "Bedroom")
+            button: Button index 0-15
+            color: [r, g, b] values 0-255
+            duration_ms: milliseconds, -1=indefinite, 0=off
+        """
+        if not node or button is None:
+            return
+        topic = f"{node}/lights"
+        payload = json.dumps({"button": button, "color": color, "duration_ms": duration_ms})
+        try:
+            client.publish(topic, payload)
+        except Exception as e:
+            print(f"Error sending trellis light: {e}")
 
 # YouTube Music support functions
 import subprocess
@@ -386,8 +409,12 @@ def mpc_status():
     else: foo = "not mpc"
     return foo
 
+# Track blinking state for alternating colors
+_blink_toggle = False
+
 @app.route('/track_status', methods=['POST', 'GET'])
 def track_status():
+    global _blink_toggle
     track = {}
     if BACKEND == "mpc":
         track = get_status_mpc()
@@ -402,6 +429,16 @@ def track_status():
                 track['album'] = track_info.get('album', '')
                 track['station'] = track_info.get('radio_show', current_station or '')
                 track['uri'] = track_info.get('uri', '')
+
+                # Blink station button orange/green when buffering/connecting
+                if ENABLE_MQTT and current_mqtt_node and current_station_idx is not None:
+                    title = track['title']
+                    if title.startswith('ZPSTR_BUFFERING') or title.startswith('ZPSTR_CONNECTING'):
+                        _blink_toggle = not _blink_toggle
+                        if _blink_toggle:
+                            send_trellis_light(current_mqtt_node, current_station_idx, [255, 165, 0], 1000)  # orange
+                        else:
+                            send_trellis_light(current_mqtt_node, current_station_idx, [0, 255, 0], 1000)  # green
             else:
                 track['error'] = 'Zone not specified or not found'
         except Exception as E:
@@ -417,6 +454,8 @@ def track_status():
 def system_response(data): socketio.emit("system_update",{'system':BACKEND,'station':current_station})
 
 current_station = None
+current_station_idx = None  # Track station index for NeoTrellis button
+current_mqtt_node = None    # Track the MQTT node for light control
 
 @app.route('/play_station',methods = ['POST'])
 def play_station():
