@@ -30,8 +30,10 @@ Not TuneIn is a Flask-based web radio controller that bypasses TuneIn's ads and 
 
 ### Hardware Integration
 - **`irqtt/`** - ESP8266 Arduino sketch for IR remote control via MQTT
-  - Decodes IR signals from 38kHz receiver and publishes MQTT commands
-  - `button_map.json` - IR code to button mapping configuration
+  - Decodes IR signals from 38kHz receiver on GPIO5 (D1 on NodeMCU) and publishes MQTT commands
+  - Copy `config.h.example` to `config.h` and configure WiFi/MQTT settings
+  - `MQTT_TOPIC` in config.h must match `MQTT_CMD_TOPIC` in settings.py
+  - IR button codes are hardcoded in switch statement (lines 223-290 of irqtt.ino)
 
 ## Running the Application
 
@@ -96,7 +98,7 @@ All playback functions (play, stop, volume) use conditional logic based on `BACK
 When adding new playback features, implement both code paths in the same route handler.
 
 ### Track Metadata Parsing
-The `get_status_mpc()` function (not_tunein.py:90-146) contains station-specific parsing logic:
+The `get_status_mpc()` function (not_tunein.py:213-269) contains station-specific parsing logic:
 - SomaFM: Extracts artist/title from `[SomaFM]: Artist - Title` format
 - KCRW: Fetches metadata from KCRW API
 - WNYC: Extracts program name
@@ -114,3 +116,11 @@ When adding new stations with different formats, extend this function.
 - Stations stored as ordered list (`skeys`) for keyboard navigation
 - `station_up`/`station_down` routes cycle through stations with wraparound
 - `volume_up`/`volume_down` adjust in 5-unit increments
+
+### Global State
+Key global variables in not_tunein.py:
+- `current_station` - Currently playing station name
+- `state` - Playback state ("stopped" or station name)
+- `zs` - Dict mapping zone names to IP addresses (Sonos) or 'mpc'
+- `stations` - Dict mapping station names to stream URLs
+- `skeys` - Ordered list of station names for navigation

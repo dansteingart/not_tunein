@@ -13,7 +13,7 @@
 #include "config.h"
 
 // IR Receiver pin
-const uint16_t kRecvPin = 5; // GPIO5 (D1 on NodeMCU)
+const uint16_t kRecvPin = IR_PIN; // GPIO5 (D1 on NodeMCU)
 
 // Buffer size for capturing IR signals
 const uint16_t kCaptureBufferSize = 1024;
@@ -57,17 +57,23 @@ void setupWiFi() {
 
 // Function to connect to MQTT broker
 void reconnectMQTT() {
-  while (!mqttClient.connected()) {
-    Serial.print("Attempting MQTT connection...");
+  // Create unique client ID using chip ID to prevent conflicts
+  String clientId = "ESP8266_IR_";
+  clientId += String(ESP.getChipId(), HEX);
 
-    if (mqttClient.connect("ESP8266_IR_Remote")) {
-      Serial.println("connected!");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(mqttClient.state());
-      Serial.println(" retrying in 5 seconds");
-      delay(5000);
-    }
+  Serial.print("Attempting MQTT connection (");
+  Serial.print(clientId);
+  Serial.print(")...");
+
+  if (mqttClient.connect(clientId.c_str())) {
+    Serial.println("connected!");
+    // Give the connection time to stabilize and process initial packets
+    delay(100);
+    mqttClient.loop();
+  } else {
+    Serial.print("failed, rc=");
+    Serial.print(mqttClient.state());
+    Serial.println();
   }
 }
 
@@ -122,6 +128,7 @@ void setup() {
 
   // Setup MQTT
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+  mqttClient.setKeepAlive(60);  // Increase keepalive to 60 seconds
   reconnectMQTT();
 
   Serial.println("Listening for IR signals on GPIO5 (D1)...");
@@ -132,6 +139,34 @@ void setup() {
 }
 
 void loop() {
+  // Process MQTT network operations FIRST (must be called regularly)
+  mqttClient.loop();
+
+  // Check MQTT connection with debouncing to prevent rapid reconnection attempts
+  static unsigned long lastReconnectAttempt = 0;
+  static bool wasConnected = true;
+  bool isConnected = mqttClient.connected();
+
+  // Log connection state changes
+  if (isConnected != wasConnected) {
+    if (isConnected) {
+      Serial.println("[MQTT] Connection restored");
+    } else {
+      Serial.print("[MQTT] Connection lost, state=");
+      Serial.println(mqttClient.state());
+    }
+    wasConnected = isConnected;
+  }
+
+  if (!isConnected) {
+    unsigned long now = millis();
+    // Only attempt reconnection every 5 seconds
+    if (now - lastReconnectAttempt > 5000) {
+      lastReconnectAttempt = now;
+      reconnectMQTT();
+    }
+  }
+
   // Check if an IR signal has been received
   if (irrecv.decode(&results)) {
     // Filter out invalid signals
@@ -272,12 +307,6 @@ void loop() {
     // Resume receiving for the next signal
     irrecv.resume();
   }
-
-  // Keep MQTT connection alive
-  if (!mqttClient.connected()) {
-    reconnectMQTT();
-  }
-  mqttClient.loop();
 
   // Debug: Print a dot every 5 seconds to show we're alive
   static unsigned long lastDebug = 0;
