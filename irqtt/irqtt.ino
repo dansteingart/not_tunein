@@ -164,7 +164,7 @@ void setup() {
   // Initialize NeoPixel
   statusLED.begin();
   statusLED.setBrightness(LED_BRIGHTNESS);
-  setStatusLED(COLOR_RED);  // Start red until WiFi connects
+  setStatusLED(0);  // Start off
 
   // Wait for serial to initialize
   delay(500);
