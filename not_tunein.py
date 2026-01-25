@@ -431,14 +431,15 @@ def track_status():
                 track['uri'] = track_info.get('uri', '')
 
                 # Blink station button orange/green when buffering/connecting
-                if ENABLE_MQTT and current_mqtt_node and current_station_idx is not None:
+                # NeoTrellis buttons 0-11 are for stations
+                if ENABLE_MQTT and current_station_idx is not None and current_station_idx <= 11:
                     title = track['title']
                     if title.startswith('ZPSTR_BUFFERING') or title.startswith('ZPSTR_CONNECTING'):
                         _blink_toggle = not _blink_toggle
                         if _blink_toggle:
-                            send_trellis_light(current_mqtt_node, current_station_idx, [255, 165, 0], 1000)  # orange
+                            send_trellis_light(zone, current_station_idx, [255, 165, 0], 1000)  # orange
                         else:
-                            send_trellis_light(current_mqtt_node, current_station_idx, [0, 255, 0], 1000)  # green
+                            send_trellis_light(zone, current_station_idx, [0, 255, 0], 1000)  # green
             else:
                 track['error'] = 'Zone not specified or not found'
         except Exception as E:
@@ -459,7 +460,7 @@ current_mqtt_node = None    # Track the MQTT node for light control
 
 @app.route('/play_station',methods = ['POST'])
 def play_station():
-    global current_station, state
+    global current_station, state, current_station_idx
     state = current_station
     try: data = request.json
     except: data = request.form
@@ -467,7 +468,14 @@ def play_station():
 
     # Convert station index to station name if needed
     if isinstance(station, int) or (isinstance(station, str) and station.isdigit()):
-        station = skeys[int(station)]
+        current_station_idx = int(station)
+        station = skeys[current_station_idx]
+    else:
+        # Look up index by name
+        try:
+            current_station_idx = skeys.index(station)
+        except (ValueError, AttributeError):
+            current_station_idx = None
 
     current_station = station
 
@@ -629,7 +637,7 @@ def volume_down():
 
 @app.route('/station_up',methods = ['GET'])
 def station_up():
-    global current_station, state
+    global current_station, state, current_station_idx
     data = request.args
 
     # Find current station index
@@ -642,6 +650,7 @@ def station_up():
     next_idx = (current_idx + 1) % len(skeys)
     station = skeys[next_idx]
     current_station = station
+    current_station_idx = next_idx
     state = current_station
 
     # Get station URL
@@ -680,7 +689,7 @@ def station_up():
 
 @app.route('/station_down',methods = ['GET'])
 def station_down():
-    global current_station, state
+    global current_station, state, current_station_idx
     data = request.args
 
     # Find current station index
@@ -693,6 +702,7 @@ def station_down():
     prev_idx = (current_idx - 1) % len(skeys)
     station = skeys[prev_idx]
     current_station = station
+    current_station_idx = prev_idx
     state = current_station
 
     # Get station URL
