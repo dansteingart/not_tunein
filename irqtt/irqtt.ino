@@ -2,6 +2,7 @@
  * ESP8266 IR Decoder with MQTT
  * Decodes IR signals from a 38kHz IR receiver on GPIO5 (D1 on NodeMCU)
  * Sends MQTT commands to control Sonos/radio
+ * NeoPixel status LED on GPIO0
  */
 
 #include <Arduino.h>
@@ -10,10 +11,47 @@
 #include <IRremoteESP8266.h>
 #include <IRrecv.h>
 #include <IRutils.h>
+#include <Adafruit_NeoPixel.h>
 #include "config.h"
 
 // IR Receiver pin
 const uint16_t kRecvPin = IR_PIN; // GPIO5 (D1 on NodeMCU)
+
+// NeoPixel status LED
+#ifndef LED_PIN
+#define LED_PIN 0  // GPIO0
+#endif
+#ifndef LED_COUNT
+#define LED_COUNT 1
+#endif
+#ifndef LED_BRIGHTNESS
+#define LED_BRIGHTNESS 50  // 0-255
+#endif
+
+Adafruit_NeoPixel statusLED(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+// LED state tracking
+unsigned long ledFlashStart = 0;
+unsigned long ledFlashDuration = 0;
+
+void setStatusLED(uint32_t color) {
+  statusLED.setPixelColor(0, color);
+  statusLED.show();
+}
+
+void flashLED(uint8_t r, uint8_t g, uint8_t b, unsigned long duration = 150) {
+  setStatusLED(statusLED.Color(r, g, b));
+  ledFlashStart = millis();
+  ledFlashDuration = duration;
+}
+
+void updateStatusLED() {
+  // Check if flash duration expired, turn off
+  if (ledFlashStart > 0 && (millis() - ledFlashStart) > ledFlashDuration) {
+    setStatusLED(0);  // Turn off
+    ledFlashStart = 0;
+  }
+}
 
 // Buffer size for capturing IR signals
 const uint16_t kCaptureBufferSize = 1024;
@@ -44,11 +82,16 @@ void setupWiFi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
+  bool ledOn = true;
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    delay(250);
+    // Blink while connecting
+    setStatusLED(ledOn ? statusLED.Color(LED_WIFI_R, LED_WIFI_G, LED_WIFI_B) : 0);
+    ledOn = !ledOn;
     Serial.print(".");
   }
 
+  setStatusLED(0);  // Turn off when connected
   Serial.println();
   Serial.println("WiFi connected!");
   Serial.print("IP address: ");
@@ -92,6 +135,7 @@ void sendMQTTCommand(const char* cmd) {
   Serial.print("Publishing MQTT: ");
   Serial.println(payload);
 
+  flashLED(LED_CMD_R, LED_CMD_G, LED_CMD_B, LED_FLASH_MS);
   mqttClient.publish(MQTT_TOPIC, payload.c_str());
 }
 
@@ -110,11 +154,17 @@ void sendStationCommand(int stationIndex) {
   Serial.print("Publishing MQTT: ");
   Serial.println(payload);
 
+  flashLED(LED_CMD_R, LED_CMD_G, LED_CMD_B, LED_FLASH_MS);
   mqttClient.publish(MQTT_TOPIC, payload.c_str());
 }
 
 void setup() {
   Serial.begin(115200);
+
+  // Initialize NeoPixel
+  statusLED.begin();
+  statusLED.setBrightness(LED_BRIGHTNESS);
+  setStatusLED(COLOR_RED);  // Start red until WiFi connects
 
   // Wait for serial to initialize
   delay(500);
@@ -139,6 +189,9 @@ void setup() {
 }
 
 void loop() {
+  // Update LED flash state
+  updateStatusLED();
+
   // Process MQTT network operations FIRST (must be called regularly)
   mqttClient.loop();
 

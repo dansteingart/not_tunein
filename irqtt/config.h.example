@@ -16,4 +16,20 @@
 #define MQTT_TOPIC "not_tunein/tracks/cmd" // Command topic (must match MQTT_CMD_TOPIC)
 #define SONOS_ROOM "Living Room"           // Sonos room/zone name
 
+// Hardware pins
+#define IR_PIN 5            // GPIO5 (D1 on NodeMCU) - IR receiver
+#define LED_PIN 0           // GPIO0 (D3 on NodeMCU) - NeoPixel status LED
+#define LED_BRIGHTNESS 50   // 0-255
+
+// LED colors (R, G, B 0-255)
+#define LED_CMD_R 100       // Command sent flash color (light green)
+#define LED_CMD_G 255
+#define LED_CMD_B 100
+
+#define LED_WIFI_R 255      // WiFi connecting blink color (orange)
+#define LED_WIFI_G 150
+#define LED_WIFI_B 0
+
+#define LED_FLASH_MS 150    // Flash duration in milliseconds
+
 #endif
